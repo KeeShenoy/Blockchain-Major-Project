@@ -1,0 +1,23 @@
+# Rust
+target/
+
+# Node / Hardhat generated files
+ethereum/node_modules/
+ethereum/artifacts/
+ethereum/cache/
+
+# Local secrets and generated evaluation output
+.env
+.env.*
+!.env.example
+evaluation/results/
+evaluation/plots/
+evaluation/output/
+
+# Editor / OS files
+.vscode/
+.idea/
+*.swp
+*.log
+.DS_Store
+Thumbs.db

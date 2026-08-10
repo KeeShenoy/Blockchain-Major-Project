@@ -4,3 +4,6 @@ members = [
     "issuer",
     "prover-verifier",
 ]
+
+[profile.release]
+opt-level = 3

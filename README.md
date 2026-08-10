@@ -57,3 +57,20 @@ pip install -r requirements.txt
 Folder structure, interfaces, and module names above are frozen per project rules —
 do not rename `issuer/`, `prover-verifier/`, `ethereum/`, or `evaluation/` in later
 phases.
+
+## Phase 2 baseline
+
+prover-verifier now contains the unoptimized Winterfell v0.13.1 Merkle-path
+baseline. It constructs a Merkle tree, proves membership for one leaf, verifies
+the proof against the public root, and prints JSON benchmark metrics.
+
+Winterfell v0.13.1 cannot be built from a native Windows checkout because one
+of its dependencies contains a Windows-reserved path. Run the Rust commands in
+WSL/Linux:
+
+    cargo check --workspace
+    cargo test -p prover-verifier
+    cargo run -p prover-verifier --release
+
+Phase 2 does not modify the Ethereum trust-anchor contract, issuer functionality,
+or later Split/Ligerolight optimizations.
