@@ -1,0 +1,16 @@
+> Replaces the ambiguous methodology paragraph in the synopsis draft. Frozen — do not edit without updating this file and the synopsis together.
+
+The proposed framework implements an off-chain, transparent zero-knowledge proving pipeline for privacy-preserving credential authenticity verification, with Ethereum used solely as an immutable trust anchor. The system is organized into four functional layers plus an offline evaluation layer.
+
+In the issuer layer, the credential-issuing authority generates a batch of digital credentials, constructs a Merkle tree over the batch, and computes the Merkle root. This root is published to a lightweight smart contract on Ethereum (Ethereum layer); each credential, together with its private Merkle authentication path, is transmitted directly and privately to the corresponding holder — Ethereum never receives or processes any credential data itself.
+
+When a verifier initiates a credential-verification request, the credential holder (prover layer) assembles a private witness consisting of the credential leaf value, its Merkle authentication path, and its position in the tree, together with the public Merkle root as public input. The holder then executes a transparent STARK-based proving pipeline built on an Algebraic Intermediate Representation (AIR) that encodes Merkle-path verification as a sequence of transition and boundary constraints, following the constraint-composition and quotient-batching approach described in eSTARK.
+
+Two additional efficiency techniques, adapted from the reviewed literature, are incorporated at their respective pipeline stages: a Split-inspired chunked trace-generation strategy is applied during witness/trace construction to reduce peak prover memory consumption, and a Ligerolight-inspired batched-opening strategy is applied during the FRI query phase to reduce redundant Merkle authentication data in the final proof, lowering proof size and verification cost.
+
+The resulting non-interactive proof (via the Fiat–Shamir transform) is sent to the verifier, who independently fetches the current Merkle root from the Ethereum smart contract and checks the proof locally, accepting or rejecting the credential's validity without learning the credential's contents, its position in the batch, or any other credential in the batch.
+
+The complete pipeline — trace generation, commitment, FRI, and verification — executes entirely off-chain; Ethereum's sole role is to store and serve the Merkle root as a tamper-evident, publicly verifiable trust anchor. The framework's effectiveness is evaluated by benchmarking this optimized pipeline against an unmodified baseline STARK implementation of the same Merkle-path circuit, across proving time, peak memory usage, proof size, verification time, and scalability with tree depth.
+
+## Known limitation (state if asked)
+No publicly available STARK prover (Winterfell included) currently provides perfect zero-knowledge — query responses can leak some information about the witness beyond what is strictly necessary. This is an industry-wide open problem, not specific to this implementation. Scope the privacy claim accordingly: the framework hides credential contents, sibling values, and batch position from realistic adversaries under standard STARK security parameters; it does not claim information-theoretic zero leakage.
