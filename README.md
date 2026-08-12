@@ -43,7 +43,7 @@ pip install -r requirements.txt
 - [ ] `npm run deploy:local` prints a deployed contract address
 - [ ] `python3 -c "import pandas, matplotlib, numpy"` runs with no import errors
 
-## Phase status:
+## Phase status
 
 1. Repo scaffold, toolchains — **done, this response**
 2. Baseline STARK pipeline (Winterfell `merkle` example, unmodified) — pending
