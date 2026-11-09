@@ -1,0 +1,15 @@
+[package]
+name = "merkle-core"
+version = "0.1.0"
+edition = "2021"
+description = "Rescue Merkle primitives and the witness format shared by the issuer and prover-verifier"
+
+[features]
+# Uses Winterfell's field operators for Rescue instead of the faster exact routines here. For
+# measuring what those routines gain; the results are identical either way.
+generic-field-arithmetic = []
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+winterfell = { version = "0.13.1", default-features = false, features = ["std"] }
+core-utils = { version = "0.13.1", package = "winter-utils", default-features = false, features = ["std"] }

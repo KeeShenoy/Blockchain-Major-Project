@@ -1,164 +1,276 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the
-// LICENSE file in the root directory of this source tree.
+//! Execution trace construction and the two Winterfell prover configurations.
 
+use merkle_core::{rescue, Hash, Witness};
 use winterfell::{
-    crypto::MerkleTree, matrix::ColMatrix, AuxRandElements, CompositionPoly, CompositionPolyTrace,
-    ConstraintCompositionCoefficients, DefaultConstraintCommitment, DefaultConstraintEvaluator,
-    DefaultTraceLde, PartitionOptions, StarkDomain, Trace, TraceInfo, TracePolyTable, TraceTable,
+    crypto::{DefaultRandomCoin, Digest, ElementHasher, Hasher, MerkleTree},
+    math::{fields::f128::BaseElement, FieldElement},
+    matrix::ColMatrix,
+    AuxRandElements, CompositionPoly, CompositionPolyTrace, ConstraintCompositionCoefficients,
+    DefaultConstraintCommitment, DefaultConstraintEvaluator, DefaultTraceLde, PartitionOptions,
+    Proof, ProofOptions, Prover, ProverError, StarkDomain, Trace, TraceInfo, TracePolyTable,
+    TraceTable,
 };
 
-use super::{
-    rescue, BaseElement, DefaultRandomCoin, ElementHasher, FieldElement, MerkleAir, PhantomData,
-    ProofOptions, Prover, PublicInputs, HASH_CYCLE_LEN, HASH_STATE_WIDTH, NUM_HASH_ROUNDS,
-    TRACE_WIDTH,
+use crate::{
+    air::{
+        trace_length, MerkleAir, PublicInputs, SessionId, HASH_CYCLE_LEN, HASH_STATE_WIDTH,
+        INDEX_BIT_COLUMN, TRACE_WIDTH,
+    },
+    compact::{CompactConstraintCommitment, CompactTraceLde},
+    config::{CommitmentHasher, ProverMode},
+    heap,
 };
 
-// MERKLE PROVER
-// ================================================================================================
+/// Domain separator for the column-blinding values derived from the witness.
+const BLINDING_DOMAIN: u64 = u64::from_le_bytes(*b"blind\0\0\0");
 
-pub struct MerkleProver<H: ElementHasher> {
-    options: ProofOptions,
-    _hasher: PhantomData<H>,
-}
+/// Builds the execution trace for a Merkle path.
+///
+/// Column 6 is blinded. Only one row per cycle is constrained, to the index bit; all others get
+/// pseudorandom field elements. If those rows held a predictable value, the column would depend on
+/// nothing but the leaf index, and a verifier could recover the index by computing the column's
+/// low-degree extension for each of the `2^depth` candidates and comparing it to the opened query
+/// rows. Blinding is derived from the witness, as in RFC 6979, so the prover stays deterministic
+/// and needs no randomness source. This hides column 6 only; see `docs/security-and-privacy.md`.
+pub fn build_trace(witness: &Witness, session: SessionId) -> TraceTable<BaseElement> {
+    let seed = blinding_seed(witness, session);
+    let blind = |row: usize| {
+        let digest = CommitmentHasher::merge_with_int(seed, row as u64).as_bytes();
+        let mut limb = [0u8; 16];
+        limb.copy_from_slice(&digest[..16]);
+        BaseElement::new(u128::from_le_bytes(limb))
+    };
 
-impl<H: ElementHasher> MerkleProver<H> {
-    pub fn new(options: ProofOptions) -> Self {
-        Self {
-            options,
-            _hasher: PhantomData,
-        }
-    }
+    let mut trace = TraceTable::new(TRACE_WIDTH, trace_length(witness.depth()));
+    trace.fill(
+        |state| {
+            state[0] = witness.value[0];
+            state[1] = witness.value[1];
+            state[2..HASH_STATE_WIDTH].fill(BaseElement::ZERO);
+            state[INDEX_BIT_COLUMN] = blind(0);
+        },
+        |step, state| {
+            let cycle = step / HASH_CYCLE_LEN;
+            let cycle_position = step % HASH_CYCLE_LEN;
 
-    pub fn build_trace(
-        &self,
-        value: [BaseElement; 2],
-        branch: &[rescue::Hash],
-        index: usize,
-    ) -> TraceTable<BaseElement> {
-        // allocate memory to hold the trace table
-        let trace_length = branch.len() * HASH_CYCLE_LEN;
-        let mut trace = TraceTable::new(TRACE_WIDTH, trace_length);
-
-        // skip the first node of the branch because it will be computed in the trace as hash(value)
-        let branch = &branch[1..];
-
-        trace.fill(
-            |state| {
-                // initialize first state of the computation
-                state[0] = value[0];
-                state[1] = value[1];
-                state[2..].fill(BaseElement::ZERO);
-            },
-            |step, state| {
-                // execute the transition function for all steps
-                //
-                // For the first 7 steps of each 8-step cycle, compute a single round of Rescue
-                // hash in registers [0..6]. On the 8th step, insert the next branch node into the
-                // trace in the positions defined by the next bit of the leaf index. If the bit is
-                // ZERO, the next node goes into registers [2, 3], if it is ONE, the node goes into
-                // registers [0, 1].
-
-                let cycle_num = step / HASH_CYCLE_LEN;
-                let cycle_pos = step % HASH_CYCLE_LEN;
-
-                if cycle_pos < NUM_HASH_ROUNDS {
-                    rescue::apply_round(&mut state[..HASH_STATE_WIDTH], step);
+            if cycle_position < rescue::NUM_ROUNDS {
+                rescue::apply_round(&mut state[..HASH_STATE_WIDTH], step);
+                state[INDEX_BIT_COLUMN] = blind(step + 1);
+            } else {
+                // Load the next path node: it goes to registers [2, 3] when the index bit is 0, and
+                // to registers [0, 1] (moving the accumulated hash to [2, 3]) when the bit is 1.
+                let [node0, node1] = witness.path[cycle].to_elements();
+                let bit = (witness.index >> cycle) & 1;
+                if bit == 0 {
+                    state[2] = node0;
+                    state[3] = node1;
                 } else {
-                    let branch_node = branch[cycle_num].to_elements();
-                    let index_bit = BaseElement::new(((index >> cycle_num) & 1) as u128);
-                    if index_bit == BaseElement::ZERO {
-                        // if index bit is zero, new branch node goes into registers [2, 3]; values
-                        // in registers [0, 1] (the accumulated hash) remain unchanged
-                        state[2] = branch_node[0];
-                        state[3] = branch_node[1];
-                    } else {
-                        // if index bit is one, accumulated hash goes into registers [2, 3],
-                        // and new branch nodes goes into registers [0, 1]
-                        state[2] = state[0];
-                        state[3] = state[1];
-                        state[0] = branch_node[0];
-                        state[1] = branch_node[1];
-                    }
-                    // reset the capacity registers of the state to ZERO
-                    state[4] = BaseElement::ZERO;
-                    state[5] = BaseElement::ZERO;
-
-                    state[6] = index_bit;
+                    state[2] = state[0];
+                    state[3] = state[1];
+                    state[0] = node0;
+                    state[1] = node1;
                 }
-            },
-        );
+                state[4] = BaseElement::ZERO;
+                state[5] = BaseElement::ZERO;
+                state[INDEX_BIT_COLUMN] = BaseElement::new(bit as u128);
+            }
+        },
+    );
+    trace
+}
 
-        // set index bit at the second step to one; this still results in a valid execution trace
-        // because actual index bits are inserted into the trace after step 7, but it ensures
-        // that there are no repeating patterns in the index bit register, and thus the degree
-        // of the index bit constraint is stable.
-        trace.set(6, 1, FieldElement::ONE);
+fn blinding_seed(witness: &Witness, session: SessionId) -> <CommitmentHasher as Hasher>::Digest {
+    let mut elements = Vec::with_capacity(5 + 2 * witness.depth());
+    elements.extend_from_slice(&session.0);
+    elements.extend_from_slice(&witness.value);
+    elements.push(BaseElement::new(witness.index as u128));
+    elements.extend_from_slice(Hash::hashes_as_elements(&witness.path));
+    CommitmentHasher::merge_with_int(CommitmentHasher::hash_elements(&elements), BLINDING_DOMAIN)
+}
 
-        trace
+fn public_inputs(trace: &TraceTable<BaseElement>, session: SessionId) -> PublicInputs {
+    let last_step = trace.length() - 1;
+    PublicInputs {
+        tree_root: [trace.get(0, last_step), trace.get(1, last_step)],
+        session,
     }
 }
 
-impl<H: ElementHasher> Prover for MerkleProver<H>
-where
-    H: ElementHasher<BaseField = BaseElement> + Sync,
-{
+/// Proves an already built trace with explicit protocol parameters and storage.
+pub fn prove_trace_with(
+    trace: TraceTable<BaseElement>,
+    options: ProofOptions,
+    compact_storage: bool,
+    session: SessionId,
+) -> Result<Proof, ProverError> {
+    if compact_storage {
+        CompactProver { options, session }.prove(trace)
+    } else {
+        DefaultProver { options, session }.prove(trace)
+    }
+}
+
+/// Proves an already built trace, using this mode's parameters and storage.
+pub fn prove_trace(
+    trace: TraceTable<BaseElement>,
+    mode: ProverMode,
+    depth: usize,
+    session: SessionId,
+) -> Result<Proof, ProverError> {
+    prove_trace_with(
+        trace,
+        mode.proof_options(depth),
+        mode.uses_compact_storage(),
+        session,
+    )
+}
+
+/// Builds the trace for a witness and proves it, bound to `session`.
+pub fn prove(
+    witness: &Witness,
+    mode: ProverMode,
+    session: SessionId,
+) -> Result<Proof, ProverError> {
+    prove_trace(
+        build_trace(witness, session),
+        mode,
+        witness.depth(),
+        session,
+    )
+}
+
+/// Stores the trace LDE, composition LDE, and Merkle trees the way Winterfell does by default.
+pub struct DefaultProver {
+    pub options: ProofOptions,
+    pub session: SessionId,
+}
+
+/// Same protocol and identical proof bytes as [`DefaultProver`], using less heap to get there.
+pub struct CompactProver {
+    pub options: ProofOptions,
+    pub session: SessionId,
+}
+
+impl Prover for DefaultProver {
     type BaseField = BaseElement;
     type Air = MerkleAir;
     type Trace = TraceTable<BaseElement>;
-    type HashFn = H;
-    type VC = MerkleTree<H>;
-    type RandomCoin = DefaultRandomCoin<Self::HashFn>;
-    type TraceLde<E: FieldElement<BaseField = Self::BaseField>> =
-        DefaultTraceLde<E, Self::HashFn, Self::VC>;
-    type ConstraintCommitment<E: FieldElement<BaseField = Self::BaseField>> =
-        DefaultConstraintCommitment<E, H, Self::VC>;
-    type ConstraintEvaluator<'a, E: FieldElement<BaseField = Self::BaseField>> =
-        DefaultConstraintEvaluator<'a, Self::Air, E>;
+    type HashFn = CommitmentHasher;
+    type VC = MerkleTree<CommitmentHasher>;
+    type RandomCoin = DefaultRandomCoin<CommitmentHasher>;
+    type TraceLde<E: FieldElement<BaseField = BaseElement>> =
+        DefaultTraceLde<E, CommitmentHasher, Self::VC>;
+    type ConstraintCommitment<E: FieldElement<BaseField = BaseElement>> =
+        DefaultConstraintCommitment<E, CommitmentHasher, Self::VC>;
+    type ConstraintEvaluator<'a, E: FieldElement<BaseField = BaseElement>> =
+        DefaultConstraintEvaluator<'a, MerkleAir, E>;
 
     fn get_pub_inputs(&self, trace: &Self::Trace) -> PublicInputs {
-        let last_step = trace.length() - 1;
-        PublicInputs {
-            tree_root: [trace.get(0, last_step), trace.get(1, last_step)],
-        }
+        public_inputs(trace, self.session)
     }
 
     fn options(&self) -> &ProofOptions {
         &self.options
     }
 
-    fn new_trace_lde<E: FieldElement<BaseField = Self::BaseField>>(
+    fn new_trace_lde<E: FieldElement<BaseField = BaseElement>>(
         &self,
         trace_info: &TraceInfo,
-        main_trace: &ColMatrix<Self::BaseField>,
-        domain: &StarkDomain<Self::BaseField>,
+        main_trace: &ColMatrix<BaseElement>,
+        domain: &StarkDomain<BaseElement>,
         partition_option: PartitionOptions,
     ) -> (Self::TraceLde<E>, TracePolyTable<E>) {
-        DefaultTraceLde::new(trace_info, main_trace, domain, partition_option)
+        heap::checkpoint("prover_setup");
+        let result = DefaultTraceLde::new(trace_info, main_trace, domain, partition_option);
+        heap::checkpoint("trace_commitment");
+        result
     }
 
-    fn new_evaluator<'a, E: FieldElement<BaseField = Self::BaseField>>(
+    fn new_evaluator<'a, E: FieldElement<BaseField = BaseElement>>(
         &self,
-        air: &'a Self::Air,
+        air: &'a MerkleAir,
         aux_rand_elements: Option<AuxRandElements<E>>,
         composition_coefficients: ConstraintCompositionCoefficients<E>,
     ) -> Self::ConstraintEvaluator<'a, E> {
         DefaultConstraintEvaluator::new(air, aux_rand_elements, composition_coefficients)
     }
 
-    fn build_constraint_commitment<E: FieldElement<BaseField = Self::BaseField>>(
+    fn build_constraint_commitment<E: FieldElement<BaseField = BaseElement>>(
         &self,
         composition_poly_trace: CompositionPolyTrace<E>,
         num_constraint_composition_columns: usize,
-        domain: &StarkDomain<Self::BaseField>,
+        domain: &StarkDomain<BaseElement>,
         partition_options: PartitionOptions,
     ) -> (Self::ConstraintCommitment<E>, CompositionPoly<E>) {
-        DefaultConstraintCommitment::new(
+        heap::checkpoint("constraint_evaluation");
+        let result = DefaultConstraintCommitment::new(
             composition_poly_trace,
             num_constraint_composition_columns,
             domain,
             partition_options,
-        )
+        );
+        heap::checkpoint("composition_commitment");
+        result
+    }
+}
+
+impl Prover for CompactProver {
+    type BaseField = BaseElement;
+    type Air = MerkleAir;
+    type Trace = TraceTable<BaseElement>;
+    type HashFn = CommitmentHasher;
+    type VC = MerkleTree<CommitmentHasher>;
+    type RandomCoin = DefaultRandomCoin<CommitmentHasher>;
+    type TraceLde<E: FieldElement<BaseField = BaseElement>> = CompactTraceLde<E, CommitmentHasher>;
+    type ConstraintCommitment<E: FieldElement<BaseField = BaseElement>> =
+        CompactConstraintCommitment<E, CommitmentHasher>;
+    type ConstraintEvaluator<'a, E: FieldElement<BaseField = BaseElement>> =
+        DefaultConstraintEvaluator<'a, MerkleAir, E>;
+
+    fn get_pub_inputs(&self, trace: &Self::Trace) -> PublicInputs {
+        public_inputs(trace, self.session)
+    }
+
+    fn options(&self) -> &ProofOptions {
+        &self.options
+    }
+
+    fn new_trace_lde<E: FieldElement<BaseField = BaseElement>>(
+        &self,
+        trace_info: &TraceInfo,
+        main_trace: &ColMatrix<BaseElement>,
+        domain: &StarkDomain<BaseElement>,
+        _partition_option: PartitionOptions,
+    ) -> (Self::TraceLde<E>, TracePolyTable<E>) {
+        heap::checkpoint("prover_setup");
+        let result = CompactTraceLde::new(trace_info, main_trace, domain);
+        heap::checkpoint("trace_commitment");
+        result
+    }
+
+    fn new_evaluator<'a, E: FieldElement<BaseField = BaseElement>>(
+        &self,
+        air: &'a MerkleAir,
+        aux_rand_elements: Option<AuxRandElements<E>>,
+        composition_coefficients: ConstraintCompositionCoefficients<E>,
+    ) -> Self::ConstraintEvaluator<'a, E> {
+        DefaultConstraintEvaluator::new(air, aux_rand_elements, composition_coefficients)
+    }
+
+    fn build_constraint_commitment<E: FieldElement<BaseField = BaseElement>>(
+        &self,
+        composition_poly_trace: CompositionPolyTrace<E>,
+        num_constraint_composition_columns: usize,
+        domain: &StarkDomain<BaseElement>,
+        _partition_options: PartitionOptions,
+    ) -> (Self::ConstraintCommitment<E>, CompositionPoly<E>) {
+        heap::checkpoint("constraint_evaluation");
+        let result = CompactConstraintCommitment::new(
+            composition_poly_trace,
+            num_constraint_composition_columns,
+            domain,
+        );
+        heap::checkpoint("composition_commitment");
+        result
     }
 }

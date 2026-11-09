@@ -1,0 +1,136 @@
+[
+  {
+    "mode": "baseline",
+    "tree_depth": 7,
+    "prove_warm": {
+      "iterations": 200,
+      "max_ns": 3233955,
+      "mean_ns": 1855692.81,
+      "median_ns": 1801421,
+      "min_ns": 1654650,
+      "total_ns": 371138562
+    },
+    "trace_build_warm": {
+      "iterations": 200,
+      "max_ns": 958420,
+      "mean_ns": 624636.075,
+      "median_ns": 611284,
+      "min_ns": 573562,
+      "total_ns": 124927215
+    },
+    "prove_stages_mean_ns": {
+      "build_composition_poly_columns": 54349,
+      "build_deep_composition_poly": 53503,
+      "build_domain": 8282,
+      "build_proof_object": 40239,
+      "commit_to_constraint_evaluations": 358222,
+      "commit_to_main_trace_segment": 346918,
+      "compute_constraint_evaluation_commitment": 119488,
+      "compute_execution_trace_commitment": 116513,
+      "compute_fri_layers": 58402,
+      "determine_query_positions": 4301,
+      "evaluate_composition_poly_columns": 182419,
+      "evaluate_constraints": 861937,
+      "evaluate_deep_composition_poly": 37272,
+      "extend_execution_trace": 229176
+    }
+  },
+  {
+    "mode": "optimized",
+    "tree_depth": 7,
+    "prove_warm": {
+      "iterations": 200,
+      "max_ns": 2635310,
+      "mean_ns": 1749923.73,
+      "median_ns": 1711281,
+      "min_ns": 1616144,
+      "total_ns": 349984746
+    },
+    "trace_build_warm": {
+      "iterations": 200,
+      "max_ns": 802047,
+      "mean_ns": 596569.86,
+      "median_ns": 585907,
+      "min_ns": 556318,
+      "total_ns": 119313972
+    },
+    "prove_stages_mean_ns": {
+      "build_deep_composition_poly": 50269,
+      "build_domain": 7519,
+      "build_proof_object": 65731,
+      "commit_to_constraint_evaluations": 319724,
+      "commit_to_main_trace_segment": 334387,
+      "compute_fri_layers": 49857,
+      "determine_query_positions": 3576,
+      "evaluate_constraints": 806124,
+      "evaluate_deep_composition_poly": 33759
+    }
+  },
+  {
+    "mode": "baseline",
+    "tree_depth": 31,
+    "prove_warm": {
+      "iterations": 200,
+      "max_ns": 11663281,
+      "mean_ns": 7325216.04,
+      "median_ns": 7279264,
+      "min_ns": 6555108,
+      "total_ns": 1465043208
+    },
+    "trace_build_warm": {
+      "iterations": 200,
+      "max_ns": 4347080,
+      "mean_ns": 2383648.76,
+      "median_ns": 2331677,
+      "min_ns": 2229583,
+      "total_ns": 476729752
+    },
+    "prove_stages_mean_ns": {
+      "build_composition_poly_columns": 225577,
+      "build_deep_composition_poly": 177890,
+      "build_domain": 25857,
+      "build_proof_object": 55345,
+      "commit_to_constraint_evaluations": 1641477,
+      "commit_to_main_trace_segment": 1668124,
+      "compute_constraint_evaluation_commitment": 496706,
+      "compute_execution_trace_commitment": 501411,
+      "compute_fri_layers": 201238,
+      "determine_query_positions": 4117,
+      "evaluate_composition_poly_columns": 916041,
+      "evaluate_constraints": 3259621,
+      "evaluate_deep_composition_poly": 161706,
+      "extend_execution_trace": 1164475
+    }
+  },
+  {
+    "mode": "optimized",
+    "tree_depth": 31,
+    "prove_warm": {
+      "iterations": 200,
+      "max_ns": 8192923,
+      "mean_ns": 6918581.385,
+      "median_ns": 6847157,
+      "min_ns": 6475249,
+      "total_ns": 1383716277
+    },
+    "trace_build_warm": {
+      "iterations": 200,
+      "max_ns": 2644924,
+      "mean_ns": 2266451.245,
+      "median_ns": 2225382,
+      "min_ns": 2124793,
+      "total_ns": 453290249
+    },
+    "prove_stages_mean_ns": {
+      "build_deep_composition_poly": 174791,
+      "build_domain": 25020,
+      "build_proof_object": 81479,
+      "commit_to_constraint_evaluations": 1393109,
+      "commit_to_main_trace_segment": 1681112,
+      "compute_fri_layers": 212373,
+      "determine_query_positions": 3901,
+      "evaluate_constraints": 3055425,
+      "evaluate_deep_composition_poly": 153366
+    }
+  }
+]

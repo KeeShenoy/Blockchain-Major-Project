@@ -1,76 +1,138 @@
 # credential-zkp-project
 
-Transparent hybrid-STARK proving pipeline (eSTARK-style AIR/FRI + Split-inspired
-memory optimization + Ligerolight-inspired batched opening) for privacy-preserving
-credential verification, with Ethereum as trust anchor only.
+Privacy-preserving credential membership with a transparent STARK, and Ethereum as the trust anchor.
 
-Architecture: see `docs/architecture-diagrams/`. Methodology: see `docs/methodology.md`.
+An issuer commits a batch of credentials to a Rescue Merkle tree and publishes only the root to a
+`CredentialRegistry` contract. A holder proves, with a Winterfell STARK, that their credential is a
+leaf of that tree, without revealing the credential or its authentication path. The verifier reads
+the root from the contract and checks the proof off-chain. Ethereum stores the root and does no
+proof verification.
 
-## Prerequisites (install locally — not available in this environment)
+- Architecture diagrams: `docs/architecture-diagrams/`
+- Methodology (as proposed): `docs/methodology.md`
+- Guarantees, fixes, and limits: [`docs/security-and-privacy.md`](docs/security-and-privacy.md)
+- Metric definitions and how to reproduce them: [`docs/benchmarking.md`](docs/benchmarking.md)
+- Latest results: [`docs/results.md`](docs/results.md)
 
-| Tool | Version | Install |
-|---|---|---|
-| Rust | stable, ≥1.75 | https://rustup.rs |
-| Node.js | ≥18 | https://nodejs.org |
-| Python | ≥3.10 | system package manager |
+## What is implemented
 
-## Setup
+| Component | Implementation |
+|---|---|
+| Proof system | Winterfell 0.13.1 STARK: AIR, FRI, and Fiat-Shamir with Blake3-256. Transparent, with no trusted setup. |
+| Statement | Knowledge of a credential and a Merkle path that hash to the public root (`prover-verifier/src/air.rs`). |
+| Credential tree | Rescue-XLIX Merkle tree (`merkle-core`), shared by the issuer and the prover. |
+| `baseline` mode | FRI folding factor 8, Winterfell's default storage. The reference STARK. |
+| `optimized` mode (recommended) | Compact storage, and an FRI shape chosen by measurement. Same query count, blowup, grinding, field, and reported security. |
+| `folded` mode | FRI folding factor 16 with compact storage. The earlier optimized configuration, kept for comparison. |
+| Compact storage | Partial Merkle trees and exact-width rows (`prover-verifier/src/compact.rs`). Output is byte-identical to Winterfell's default storage. |
+| Session binding | An optional verifier challenge in the public inputs (`--session-limb0`, `--session-limb1`), which prevents replay. |
+| Trust anchor | `ethereum/contracts/CredentialRegistry.sol`: issuer-only `publishRoot`, public `getRoot`. |
+
+The proposal's eSTARK extended AIR, Split's circuit partitioning, and Ligerolight's batch zk-IPA are
+**not** implemented. `docs/methodology.md` explains why, and what is used instead. The proof is not
+formally zero knowledge; `docs/security-and-privacy.md` lists what can honestly be claimed.
+
+## Requirements
+
+Winterfell 0.13.1 does not build from a native Windows checkout (a dependency contains a
+Windows-reserved path), so use Linux or WSL for everything below.
+
+- Rust stable (tested with 1.97.1)
+- Node.js 18 or later with npm (Hardhat prints a warning on Node 18; it works)
+- Python 3.10 or later (standard library only)
 
 ```bash
-# Rust workspace
-cargo check                     # verifies winterfell + deps resolve
-
-# Ethereum toolchain
-cd ethereum
-npm install
-npm install --save-dev @nomicfoundation/hardhat-toolbox
-npx hardhat node                # separate terminal, keep running
-npm run deploy:local            # second terminal
-
-# Evaluation toolchain
-cd ../evaluation
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
+cd ethereum && npm install && cd ..
 ```
 
-## Acceptance check for Phase 1
+## Usage
 
-- [ ] `cargo check` completes with no errors (confirms `winterfell = "0.13"` resolves
-      and the toolchain compiles it — this was not run in the environment that
-      generated this scaffold; run it first on your machine and report any
-      version conflicts before starting Phase 2)
-- [ ] `npx hardhat node` starts a local chain on `127.0.0.1:8545`
-- [ ] `npm run deploy:local` prints a deployed contract address
-- [ ] `python3 -c "import pandas, matplotlib, numpy"` runs with no import errors
+```bash
+cargo build --release
+```
 
-## Phase status
+Issue a batch of 2^7 credentials and the witness for holder 3:
 
-1. Repo scaffold, toolchains — **done, this response**
-2. Baseline STARK pipeline (Winterfell `merkle` example, unmodified) — pending
-3. Ethereum stub wiring to prover/verifier — pending
-4. Issuer module — pending
-5. Split-inspired memory optimization — pending
-6. Ligerolight-inspired batched opening — pending
-7. Evaluation harness — pending
-8. Graphs + final report artifacts — pending
+```bash
+target/release/issuer 7 3
+```
 
-Folder structure, interfaces, and module names above are frozen per project rules —
-do not rename `issuer/`, `prover-verifier/`, `ethereum/`, or `evaluation/` in later
-phases.
+This writes `issuer/output/root.json` (public) and `issuer/output/witness_3.json` (private, file
+mode 0600). Then publish and fetch the root on a local chain. Run `npx hardhat node` in a second
+terminal first.
 
-## Phase 2 baseline
+```bash
+cd ethereum
+npm run deploy:local
+npm run publish:root
+npm run fetch:root
+cd ..
+```
 
-prover-verifier now contains the unoptimized Winterfell v0.13.1 Merkle-path
-baseline. It constructs a Merkle tree, proves membership for one leaf, verifies
-the proof against the public root, and prints JSON benchmark metrics.
+`publish:root` reads `issuer/output/root.json`, or `ROOT_LIMB0` and `ROOT_LIMB1` when set.
+`fetch:root` prints `root_limb0` and `root_limb1`.
 
-Winterfell v0.13.1 cannot be built from a native Windows checkout because one
-of its dependencies contains a Windows-reserved path. Run the Rust commands in
-WSL/Linux:
+Prove as the holder, then verify against the fetched root as the verifier:
 
-    cargo check --workspace
-    cargo test -p prover-verifier
-    cargo run -p prover-verifier --release
+```bash
+target/release/prover-verifier prove --witness issuer/output/witness_3.json --mode optimized --proof-out proof.bin
+```
 
-Phase 2 does not modify the Ethereum trust-anchor contract, issuer functionality,
-or later Split/Ligerolight optimizations.
+```bash
+target/release/prover-verifier verify --proof proof.bin --mode optimized --depth 7 --root-limb0 <limb0> --root-limb1 <limb1>
+```
+
+`verify` prints a JSON record and exits with code 0 when the proof is accepted, 1 when it is
+rejected, and 2 for invalid input. The modes are `baseline`, `folded`, `optimized`, and, for ablation
+only, `split` (folding factor 8 with compact storage) and `folded-default` (folding factor 16 with
+Winterfell's storage). To bind a proof to a session, pass the verifier's challenge to both `prove`
+and `verify` with `--session-limb0` and `--session-limb1`.
+
+`prover-verifier bench --witness <file> --mode <mode>` proves and verifies in one process and
+prints every metric. The earlier form `prover-verifier --witness <file> --mode <mode> <limb0>
+<limb1>` still works.
+
+## Tests
+
+```bash
+cargo test --workspace
+```
+
+```bash
+cd ethereum && npm test
+```
+
+```bash
+bash evaluation/run_e2e.sh
+```
+
+The Rust suite covers acceptance in every mode and depth, rejection of wrong roots, tampered
+witnesses, other modes, weakened parameters, other depths, replayed sessions, and corrupted bytes,
+byte-identity of the compact prover, the exact arithmetic, determinism, and the index-recovery
+attack. `run_e2e.sh` runs the whole protocol on
+a fresh Hardhat node, including all rejections and a root rotation.
+
+## Benchmarks
+
+One command builds everything, runs every experiment, and generates all outputs:
+
+```bash
+python3 evaluation/run_benchmarks.py
+```
+
+Each run creates a new `evaluation/results/<timestamp>/` holding `raw.jsonl`, `runs.csv`,
+`summary.csv`, `summary.json`, `comparisons.csv`, `stages.json`, `report.md`, and `charts/*.svg`.
+Earlier runs are never overwritten. The original implementation is rebuilt from
+`evaluation/reference/` so that it is measured under identical definitions. Use `--quick` for a
+one-minute check of the pipeline. See `docs/benchmarking.md`.
+
+## Layout
+
+```
+merkle-core/      Rescue hash, Merkle root reconstruction, witness format and validation
+issuer/           batch issuance: root.json (public) and witness_<i>.json (private)
+prover-verifier/  AIR, provers (default and compact storage), verifier, CLI
+ethereum/         CredentialRegistry contract, deploy/publish/fetch scripts, contract tests
+evaluation/       benchmark harness, end-to-end script, fixtures, reference original, results
+docs/             methodology, security notes, benchmarking method, results
+```

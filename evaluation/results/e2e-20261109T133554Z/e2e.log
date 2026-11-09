@@ -1,0 +1,58 @@
+== build
+== start Hardhat node
+== deploy, issue, publish, fetch
+WARNING: You are currently using Node.js v18.19.1, which is not supported by Hardhat. This can lead to unexpected behavior. See https://v2.hardhat.org/nodejs-versions
+
+
+CredentialRegistry deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+root_limb0: 83576451216648585375366440509279844100
+root_limb1: 189084872155829684448754466360361053572
+witness_path_length: 7
+holder_index: 3
+WARNING: You are currently using Node.js v18.19.1, which is not supported by Hardhat. This can lead to unexpected behavior. See https://v2.hardhat.org/nodejs-versions
+
+
+published_root: 0x04370c9a490f1373a79c0b642f3de03e846dcde3a06410d7fc1f6299f66b408e
+transaction_hash: 0xbc007f3a1473cd2a480e569100e4d5fccd3261d0461a4d7633881242955e0f86
+gas_used: 45720
+WARNING: You are currently using Node.js v18.19.1, which is not supported by Hardhat. This can lead to unexpected behavior. See https://v2.hardhat.org/nodejs-versions
+
+
+root_hex: 0x04370c9a490f1373a79c0b642f3de03e846dcde3a06410d7fc1f6299f66b408e
+root_limb0: 83576451216648585375366440509279844100
+root_limb1: 189084872155829684448754466360361053572
+PASS  root fetched from Ethereum equals the issuer's root
+== valid proofs against the Ethereum root
+PASS  baseline: prove (exit 0)
+PASS  baseline: proof verifies against the fetched root (exit 0)
+PASS  folded: prove (exit 0)
+PASS  folded: proof verifies against the fetched root (exit 0)
+PASS  optimized: prove (exit 0)
+PASS  optimized: proof verifies against the fetched root (exit 0)
+== rejections
+PASS  baseline: wrong root rejected (exit 1)
+PASS  baseline: swapped root limbs rejected (exit 1)
+PASS  baseline: wrong tree depth rejected (exit 1)
+PASS  folded: wrong root rejected (exit 1)
+PASS  folded: swapped root limbs rejected (exit 1)
+PASS  folded: wrong tree depth rejected (exit 1)
+PASS  optimized: wrong root rejected (exit 1)
+PASS  optimized: swapped root limbs rejected (exit 1)
+PASS  optimized: wrong tree depth rejected (exit 1)
+PASS  baseline proof rejected in folded mode (exit 1)
+PASS  optimized proof rejected in baseline mode (exit 1)
+== session binding: a proof made for one verifier challenge fails for another
+PASS  optimized: prove bound to a session (exit 0)
+PASS  optimized: proof verifies in its own session (exit 0)
+PASS  optimized: proof replayed in another session rejected (exit 1)
+PASS  optimized: session-bound proof rejected without the session (exit 1)
+PASS  corrupted proof rejected (exit 1)
+PASS  tampered witness still produces a proof (for a different root) (exit 0)
+PASS  tampered witness rejected against the Ethereum root (exit 1)
+PASS  non-canonical witness value refused before proving (exit 2)
+== root rotation: after the issuer publishes a new batch, old proofs stop verifying
+WARNING: You are currently using Node.js v18.19.1, which is not supported by Hardhat. This can lead to unexpected behavior. See https://v2.hardhat.org/nodejs-versions
+WARNING: You are currently using Node.js v18.19.1, which is not supported by Hardhat. This can lead to unexpected behavior. See https://v2.hardhat.org/nodejs-versions
+PASS  folded proof for the old batch rejected against the new on-chain root (exit 1)
+
+ALL CHECKS PASSED  (log: /mnt/c/Users/user/Documents/ChatGPT/Major Project/credential-zkp-project/evaluation/results/e2e-20261109T133554Z/e2e.log)

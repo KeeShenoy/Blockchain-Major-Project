@@ -3,12 +3,31 @@ name = "prover-verifier"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-winterfell = { version = "0.13.1", default-features = false, features = ["std"] }
-core-utils = { version = "0.13.1", package = "winter-utils", default-features = false, features = ["std"] }
-rand-utils = { version = "0.13.1", package = "winter-rand-utils" }
-hex = "0.4"
+[lib]
+name = "prover_verifier"
+path = "src/lib.rs"
 
 [[bin]]
 name = "prover-verifier"
 path = "src/main.rs"
+
+[features]
+# Wraps the global allocator to record heap use per proving phase. Measurement builds only: the
+# bookkeeping costs time, so timing results must come from a build without this feature.
+alloc-profile = []
+# Collects Winterfell's tracing spans into per-stage proving times. Measurement builds only.
+stage-profile = ["dep:tracing"]
+# Ablation build: see the feature of the same name in merkle-core.
+generic-field-arithmetic = ["merkle-core/generic-field-arithmetic"]
+# Measurement build of a security trade-off: smaller proofs, weaker commitment hash. Off by default.
+blake3-192 = []
+# Ablation build: the partial-tree depth of the previous revision.
+previous-compact-storage = []
+
+[dependencies]
+merkle-core = { path = "../merkle-core" }
+winterfell = { version = "0.13.1", default-features = false, features = ["std"] }
+winter-prover = { version = "0.13.1", default-features = false, features = ["std"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = { version = "0.1", default-features = false, features = ["std"], optional = true }

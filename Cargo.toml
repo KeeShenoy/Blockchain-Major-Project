@@ -2,8 +2,18 @@
 resolver = "2"
 members = [
     "issuer",
+    "merkle-core",
     "prover-verifier",
 ]
 
 [profile.release]
 opt-level = 3
+# Whole-program optimization: shrinks the mapped code (about 0.5 MiB less resident memory) and lets
+# Winterfell's field arithmetic inline across crates.
+lto = "fat"
+codegen-units = 1
+
+[profile.test]
+# The test suite generates many proofs; unoptimized Rescue and FFT code would make it very slow.
+# Debug assertions stay on, so Winterfell still validates every trace against the AIR.
+opt-level = 2

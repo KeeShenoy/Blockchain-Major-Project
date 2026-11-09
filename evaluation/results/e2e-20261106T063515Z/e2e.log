@@ -1,0 +1,36 @@
+== build
+== start Hardhat node
+== deploy, issue, publish, fetch
+CredentialRegistry deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+root_limb0: 67354279693364606328465396187886141779
+root_limb1: 87211877135491548746134821952084370293
+witness_path_length: 7
+holder_index: 3
+published_root: 0x5341a6250232d97cc04969ca60f6ab3275e3d19cfd2da647b049737d85659c41
+transaction_hash: 0xfff97e6130ac694fce5035e382d32d734551eb2cfc5e1fdecba85f80e0cd5e59
+gas_used: 45720
+root_hex: 0x5341a6250232d97cc04969ca60f6ab3275e3d19cfd2da647b049737d85659c41
+root_limb0: 67354279693364606328465396187886141779
+root_limb1: 87211877135491548746134821952084370293
+PASS  root fetched from Ethereum equals the issuer's root
+== valid proofs against the Ethereum root
+PASS  baseline: prove (exit 0)
+PASS  baseline: proof verifies against the fetched root (exit 0)
+PASS  folded: prove (exit 0)
+PASS  folded: proof verifies against the fetched root (exit 0)
+== rejections
+PASS  baseline: wrong root rejected (exit 1)
+PASS  baseline: swapped root limbs rejected (exit 1)
+PASS  baseline: wrong tree depth rejected (exit 1)
+PASS  folded: wrong root rejected (exit 1)
+PASS  folded: swapped root limbs rejected (exit 1)
+PASS  folded: wrong tree depth rejected (exit 1)
+PASS  baseline proof rejected in folded mode (exit 1)
+PASS  corrupted proof rejected (exit 1)
+PASS  tampered witness still produces a proof (for a different root) (exit 0)
+PASS  tampered witness rejected against the Ethereum root (exit 1)
+PASS  non-canonical witness value refused before proving (exit 2)
+== root rotation: after the issuer publishes a new batch, old proofs stop verifying
+PASS  folded proof for the old batch rejected against the new on-chain root (exit 1)
+
+ALL CHECKS PASSED  (log: /mnt/c/Users/user/Documents/ChatGPT/Major Project/credential-zkp-project/evaluation/results/e2e-20261106T063515Z/e2e.log)

@@ -1,0 +1,47 @@
+== build
+== start Hardhat node
+== deploy, issue, publish, fetch
+WARNING: You are currently using Node.js v18.19.1, which is not supported by Hardhat. This can lead to unexpected behavior. See https://v2.hardhat.org/nodejs-versions
+
+
+CredentialRegistry deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+root_limb0: 87330023548396953148601366890017885420
+root_limb1: 94729138457660670842622690928853869083
+witness_path_length: 7
+holder_index: 3
+WARNING: You are currently using Node.js v18.19.1, which is not supported by Hardhat. This can lead to unexpected behavior. See https://v2.hardhat.org/nodejs-versions
+
+
+published_root: 0xec8ca206cc4cb5d4bc52a9de9626b3411b62d9b4d81d58df3153dca11e2b4447
+transaction_hash: 0x91e89fab4bf449f1803a2d6d6673734af38be8d10ce3801567107efa3687f377
+gas_used: 45720
+WARNING: You are currently using Node.js v18.19.1, which is not supported by Hardhat. This can lead to unexpected behavior. See https://v2.hardhat.org/nodejs-versions
+
+
+root_hex: 0xec8ca206cc4cb5d4bc52a9de9626b3411b62d9b4d81d58df3153dca11e2b4447
+root_limb0: 87330023548396953148601366890017885420
+root_limb1: 94729138457660670842622690928853869083
+PASS  root fetched from Ethereum equals the issuer's root
+== valid proofs against the Ethereum root
+PASS  baseline: prove (exit 0)
+PASS  baseline: proof verifies against the fetched root (exit 0)
+PASS  folded: prove (exit 0)
+PASS  folded: proof verifies against the fetched root (exit 0)
+== rejections
+PASS  baseline: wrong root rejected (exit 1)
+PASS  baseline: swapped root limbs rejected (exit 1)
+PASS  baseline: wrong tree depth rejected (exit 1)
+PASS  folded: wrong root rejected (exit 1)
+PASS  folded: swapped root limbs rejected (exit 1)
+PASS  folded: wrong tree depth rejected (exit 1)
+PASS  baseline proof rejected in folded mode (exit 1)
+PASS  corrupted proof rejected (exit 1)
+PASS  tampered witness still produces a proof (for a different root) (exit 0)
+PASS  tampered witness rejected against the Ethereum root (exit 1)
+PASS  non-canonical witness value refused before proving (exit 2)
+== root rotation: after the issuer publishes a new batch, old proofs stop verifying
+WARNING: You are currently using Node.js v18.19.1, which is not supported by Hardhat. This can lead to unexpected behavior. See https://v2.hardhat.org/nodejs-versions
+WARNING: You are currently using Node.js v18.19.1, which is not supported by Hardhat. This can lead to unexpected behavior. See https://v2.hardhat.org/nodejs-versions
+PASS  folded proof for the old batch rejected against the new on-chain root (exit 1)
+
+ALL CHECKS PASSED  (log: /mnt/c/Users/user/Documents/ChatGPT/Major Project/credential-zkp-project/evaluation/results/e2e-20261105T190805Z/e2e.log)

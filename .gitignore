@@ -1,23 +1,72 @@
 # Rust
 target/
+**/*.rs.bk
+*.pdb
 
-# Node / Hardhat generated files
-ethereum/node_modules/
+# Rust profiling output
+*.profraw
+*.profdata
+perf.data
+perf.data.*
+flamegraph.svg
+
+# Node and Hardhat
+node_modules/
 ethereum/artifacts/
 ethereum/cache/
+ethereum/coverage/
+ethereum/coverage.json
+ethereum/typechain-types/
+ethereum/gasReporterOutput.json
+# Address of a contract on a throwaway local chain.
+ethereum/deployment.json
 
-# Local secrets and generated evaluation output
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Secrets
 .env
 .env.*
 !.env.example
-evaluation/results/
-evaluation/plots/
+*.pem
+*.key
+
+# Private holder witnesses and generated proofs.
+# Benchmark fixtures are synthetic and seeded, and must stay tracked for reproducibility.
+issuer/output/
+witness_*.json
+!evaluation/fixtures/**/witness_*.json
+*.proof
+proof.bin
+# Proofs from end-to-end runs are evidence for the reported results.
+!evaluation/results/**/*.proof
+
+# Logs. The end-to-end log is the record cited in docs/results.md.
+*.log
+!evaluation/results/**/e2e.log
+
+# Older raw benchmark output, summarized in docs/phase6-benchmark.md
 evaluation/output/
 
-# Editor / OS files
+# Scratch directories
+.tmp-*/
+
+# Claude Code, per-user settings
+.claude/settings.local.json
+.claude/worktrees/
+
+# Editors
 .vscode/
 .idea/
 *.swp
-*.log
+*.swo
+*~
+
+# Operating systems
 .DS_Store
 Thumbs.db
+desktop.ini
+*:Zone.Identifier

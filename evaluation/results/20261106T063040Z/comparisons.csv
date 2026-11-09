@@ -1,0 +1,67 @@
+metric,experiment,treatment,control,pairs,treatment_median,control_median,median_difference,median_difference_percent,ci95_low,ci95_high,sign_test_p,treatment_lower_in_pairs,label
+prove_warm_median_ns,main,current/dynamic/folded,current/dynamic/baseline,15,1892005,1885704,7800,0.41363861984701733,-5200,13400,0.60723876953125,6,folded vs baseline (current)
+prove_first_ns,main,current/dynamic/folded,current/dynamic/baseline,15,2056205,2047505,8700,0.42490738728354754,-45600,59001,1.0,7,folded vs baseline (current)
+verify_median_ns,main,current/dynamic/folded,current/dynamic/baseline,15,341601,221599,120500,54.37750170352754,120000,121100,6.103515625e-05,0,folded vs baseline (current)
+peak_rss_after_prove_bytes,main,current/dynamic/folded,current/dynamic/baseline,15,3174400,3231744,-53248,-1.6476552598225602,-102400,-20480,0.00738525390625,13,folded vs baseline (current)
+peak_rss_process_bytes,main,current/dynamic/folded,current/dynamic/baseline,15,3710976,3796992,-86016,-2.26537216828479,-126976,-4096,0.03515625,12,folded vs baseline (current)
+external_peak_rss_bytes,main,current/dynamic/folded,current/dynamic/baseline,15,3805184,3747840,20480,0.546448087431694,4096,90112,0.11846923828125,4,folded vs baseline (current)
+proof_size_bytes,main,current/dynamic/folded,current/dynamic/baseline,15,16590,16406,184,1.121540899670852,184,184,6.103515625e-05,0,folded vs baseline (current)
+proof_size_bytes,witness,current/dynamic/folded,current/dynamic/baseline,30,17263.0,15974.5,1273.5,7.972080503302138,1162.0,1770.0,5.774199962615967e-08,1,folded vs baseline (current)
+verify_median_ns,witness,current/dynamic/folded,current/dynamic/baseline,30,391400.5,212700.0,177650.5,83.52162670427833,163750.5,197900.0,1.862645149230957e-09,0,folded vs baseline (current)
+prove_warm_median_ns,main,original/dynamic/folded,original/dynamic/baseline,15,1906404,1902805,1101,0.057861945916686155,-6999,5599,0.60723876953125,6,folded vs baseline (original)
+prove_first_ns,main,original/dynamic/folded,original/dynamic/baseline,15,2083305,2093797,-6000,-0.28656073153223544,-39999,40301,1.0,8,folded vs baseline (original)
+verify_median_ns,main,original/dynamic/folded,original/dynamic/baseline,15,416198,218900,196399,89.72087711283692,195700,199900,6.103515625e-05,0,folded vs baseline (original)
+peak_rss_after_prove_bytes,main,original/dynamic/folded,original/dynamic/baseline,15,3674112,3674112,0,0.0,-12288,24576,1.0,7,folded vs baseline (original)
+peak_rss_process_bytes,main,original/dynamic/folded,original/dynamic/baseline,15,4005888,3981312,24576,0.6172839506172839,8192,45056,0.11846923828125,4,folded vs baseline (original)
+external_peak_rss_bytes,main,original/dynamic/folded,original/dynamic/baseline,15,4063232,3928064,118784,3.0239833159541187,77824,212992,6.103515625e-05,0,folded vs baseline (original)
+proof_size_bytes,main,original/dynamic/folded,original/dynamic/baseline,15,18194,15542,2652,17.06344099858448,2652,2652,6.103515625e-05,0,folded vs baseline (original)
+proof_size_bytes,witness,original/dynamic/folded,original/dynamic/baseline,30,17343.5,15799.0,1513.0,9.576555478194823,1114.5,1834.0,1.862645149230957e-09,0,folded vs baseline (original)
+verify_median_ns,witness,original/dynamic/folded,original/dynamic/baseline,30,390100.0,223000.5,165349.5,74.14759159732826,159700.0,181850.5,1.862645149230957e-09,0,folded vs baseline (original)
+prove_warm_median_ns,main,current/dynamic/folded,original/dynamic/folded,15,1892005,1906404,-9999,-0.5244953325737881,-17900,-599,0.03515625,12,folded: current vs original
+prove_first_ns,main,current/dynamic/folded,original/dynamic/folded,15,2056205,2083305,-13000,-0.6240084865154166,-61900,71700,1.0,8,folded: current vs original
+verify_median_ns,main,current/dynamic/folded,original/dynamic/folded,15,341601,416198,-74201,-17.828293264263642,-75200,-70999,0.0009765625,14,folded: current vs original
+peak_rss_after_prove_bytes,main,current/dynamic/folded,original/dynamic/folded,15,3174400,3674112,-507904,-13.823857302118173,-552960,-471040,6.103515625e-05,15,folded: current vs original
+peak_rss_process_bytes,main,current/dynamic/folded,original/dynamic/folded,15,3710976,4005888,-258048,-6.441717791411043,-360448,-217088,6.103515625e-05,15,folded: current vs original
+external_peak_rss_bytes,main,current/dynamic/folded,original/dynamic/folded,15,3805184,4063232,-258048,-6.350806451612903,-319488,-233472,6.103515625e-05,15,folded: current vs original
+proof_size_bytes,main,current/dynamic/folded,original/dynamic/folded,15,16590,18194,-1604,-8.816093217544246,-1604,-1604,6.103515625e-05,15,folded: current vs original
+proof_size_bytes,witness,current/dynamic/folded,original/dynamic/folded,30,17263.0,17343.5,-158.5,-0.9138870470204976,-400.0,261.5,0.361594608053565,18,folded: current vs original
+verify_median_ns,witness,current/dynamic/folded,original/dynamic/folded,30,391400.5,390100.0,11550.5,2.960907459625737,-19399.0,14699.0,0.361594608053565,12,folded: current vs original
+prove_warm_median_ns,main,current/dynamic/baseline,original/dynamic/baseline,15,1885704,1902805,-19000,-0.9985258605059373,-22600,-5500,0.03515625,12,baseline: current vs original
+prove_first_ns,main,current/dynamic/baseline,original/dynamic/baseline,15,2047505,2093797,-43900,-2.0966693523775226,-86600,26600,0.3017578125,10,baseline: current vs original
+verify_median_ns,main,current/dynamic/baseline,original/dynamic/baseline,15,221599,218900,2199,1.0045682960255824,1600,3599,0.0009765625,1,baseline: current vs original
+peak_rss_after_prove_bytes,main,current/dynamic/baseline,original/dynamic/baseline,15,3231744,3674112,-442368,-12.040133779264215,-475136,-405504,6.103515625e-05,15,baseline: current vs original
+peak_rss_process_bytes,main,current/dynamic/baseline,original/dynamic/baseline,15,3796992,3981312,-192512,-4.8353909465020575,-245760,-131072,6.103515625e-05,15,baseline: current vs original
+external_peak_rss_bytes,main,current/dynamic/baseline,original/dynamic/baseline,15,3747840,3928064,-184320,-4.692387904066736,-233472,-106496,6.103515625e-05,15,baseline: current vs original
+proof_size_bytes,main,current/dynamic/baseline,original/dynamic/baseline,15,16406,15542,864,5.559130099086347,864,864,6.103515625e-05,0,baseline: current vs original
+proof_size_bytes,witness,current/dynamic/baseline,original/dynamic/baseline,30,15974.5,15799.0,127.5,0.8070131020950693,-144.5,436.5,0.584664711728692,13,baseline: current vs original
+verify_median_ns,witness,current/dynamic/baseline,original/dynamic/baseline,30,212700.0,223000.5,-9100.0,-4.080708339218971,-13750.0,-4499.0,5.947612226009369e-05,26,baseline: current vs original
+prove_warm_median_ns,main,current/dynamic/folded,current/dynamic/folded-default,15,1892005,1881004,12699,0.6751181815668653,1201,18201,0.03515625,3,folded: compact vs Winterfell storage
+prove_first_ns,main,current/dynamic/folded,current/dynamic/folded-default,15,2056205,2043504,24800,1.2136017350589967,-34400,111601,0.60723876953125,6,folded: compact vs Winterfell storage
+verify_median_ns,main,current/dynamic/folded,current/dynamic/folded-default,15,341601,340701,1000,0.2935124933592798,-1100,1500,0.3017578125,5,folded: compact vs Winterfell storage
+peak_rss_after_prove_bytes,main,current/dynamic/folded,current/dynamic/folded-default,15,3174400,3260416,-53248,-1.6331658291457287,-122880,-20480,0.0018310546875,13,folded: compact vs Winterfell storage
+peak_rss_process_bytes,main,current/dynamic/folded,current/dynamic/folded-default,15,3710976,3780608,-53248,-1.408450704225352,-102400,4096,0.11846923828125,11,folded: compact vs Winterfell storage
+external_peak_rss_bytes,main,current/dynamic/folded,current/dynamic/folded-default,15,3805184,3706880,98304,2.6519337016574585,-8192,163840,0.3017578125,5,folded: compact vs Winterfell storage
+proof_size_bytes,main,current/dynamic/folded,current/dynamic/folded-default,15,16590,16590,0,0.0,0,0,1.0,0,folded: compact vs Winterfell storage
+prove_warm_median_ns,main,current/dynamic/folded,current/no-lto/folded,15,1892005,1955105,-61300,-3.1353814756752194,-67300,-46199,0.0009765625,14,folded: LTO vs no LTO
+prove_first_ns,main,current/dynamic/folded,current/no-lto/folded,15,2056205,2116191,-33400,-1.5783074401129198,-79700,1700,0.11846923828125,11,folded: LTO vs no LTO
+verify_median_ns,main,current/dynamic/folded,current/no-lto/folded,15,341601,347301,-4401,-1.2672004975511155,-8299,-3400,0.0009765625,14,folded: LTO vs no LTO
+peak_rss_after_prove_bytes,main,current/dynamic/folded,current/no-lto/folded,15,3174400,3678208,-483328,-13.140311804008908,-520192,-466944,6.103515625e-05,15,folded: LTO vs no LTO
+peak_rss_process_bytes,main,current/dynamic/folded,current/no-lto/folded,15,3710976,3977216,-241664,-6.07621009268795,-294912,-204800,6.103515625e-05,15,folded: LTO vs no LTO
+external_peak_rss_bytes,main,current/dynamic/folded,current/no-lto/folded,15,3805184,4001792,-196608,-4.912998976458547,-266240,-167936,6.103515625e-05,15,folded: LTO vs no LTO
+proof_size_bytes,main,current/dynamic/folded,current/no-lto/folded,15,16590,16590,0,0.0,0,0,1.0,0,folded: LTO vs no LTO
+prove_warm_median_ns,main,current/static/folded,current/dynamic/folded,15,1887694,1892005,-2600,-0.13742035565445124,-13700,13190,1.0,8,folded: static vs dynamic
+prove_first_ns,main,current/static/folded,current/dynamic/folded,15,2079705,2056205,23500,1.1428821542599108,-79901,49900,1.0,7,folded: static vs dynamic
+verify_median_ns,main,current/static/folded,current/dynamic/folded,15,340801,341601,-900,-0.26346527088620936,-1202,-100,0.03515625,12,folded: static vs dynamic
+peak_rss_after_prove_bytes,main,current/static/folded,current/dynamic/folded,15,2015232,3174400,-1155072,-36.38709677419355,-1187840,-1146880,6.103515625e-05,15,folded: static vs dynamic
+peak_rss_process_bytes,main,current/static/folded,current/dynamic/folded,15,2330624,3710976,-1413120,-38.079470198675494,-1458176,-1380352,6.103515625e-05,15,folded: static vs dynamic
+external_peak_rss_bytes,main,current/static/folded,current/dynamic/folded,15,2170880,3805184,-1634304,-42.94940796555436,-1662976,-1552384,6.103515625e-05,15,folded: static vs dynamic
+proof_size_bytes,main,current/static/folded,current/dynamic/folded,15,16590,16590,0,0.0,0,0,1.0,0,folded: static vs dynamic
+prove_warm_median_ns,main,current/static/folded,original/dynamic/folded,15,1887694,1906404,-12900,-0.6766666456847552,-18799,12100,0.3017578125,10,folded static vs original folded
+prove_first_ns,main,current/static/folded,original/dynamic/folded,15,2079705,2083305,-12000,-0.5760078337065384,-67200,25999,0.3017578125,10,folded static vs original folded
+verify_median_ns,main,current/static/folded,original/dynamic/folded,15,340801,416198,-74702,-17.948668662511594,-75799,-74099,6.103515625e-05,15,folded static vs original folded
+peak_rss_after_prove_bytes,main,current/static/folded,original/dynamic/folded,15,2015232,3674112,-1658880,-45.1505016722408,-1703936,-1650688,6.103515625e-05,15,folded static vs original folded
+peak_rss_process_bytes,main,current/static/folded,original/dynamic/folded,15,2330624,4005888,-1691648,-42.22903885480573,-1732608,-1654784,6.103515625e-05,15,folded static vs original folded
+external_peak_rss_bytes,main,current/static/folded,original/dynamic/folded,15,2170880,4063232,-1892352,-46.57258064516129,-1929216,-1871872,6.103515625e-05,15,folded static vs original folded
+proof_size_bytes,main,current/static/folded,original/dynamic/folded,15,16590,18194,-1604,-8.816093217544246,-1604,-1604,6.103515625e-05,15,folded static vs original folded
+heap_peak_prove_bytes,heap,current/alloc-profile/folded,original/alloc-profile/folded,3,177567,237019,-59452,-25.083221176361388,-59452,-59452,0.25,3,folded heap: current vs original
+heap_peak_prove_bytes,heap,current/alloc-profile/folded,current/alloc-profile/folded-default,3,177567,235903,-58336,-24.72880802702806,-58336,-58336,0.25,3,folded heap: compact vs Winterfell storage

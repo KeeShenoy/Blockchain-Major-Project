@@ -1,3 +1,1 @@
-pandas
-matplotlib
-numpy
+# No packages needed: run_benchmarks.py and plot_graphs.py use only the Python standard library.

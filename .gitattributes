@@ -1,0 +1,15 @@
+# This project builds and runs under Linux or WSL, even when checked out on a Windows drive, so
+# files must keep LF endings. A shell script with CRLF endings does not run under bash.
+* text=auto eol=lf
+
+# Binary files
+*.png binary
+*.pdf binary
+*.gz binary
+*.proof binary
+
+# Generated files: collapsed in GitHub diffs and left out of language statistics.
+Cargo.lock linguist-generated=true
+ethereum/package-lock.json linguist-generated=true
+evaluation/results/** linguist-generated=true
+evaluation/fixtures/** linguist-generated=true
