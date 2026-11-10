@@ -98,3 +98,22 @@ pub fn reset() {}
 pub fn totals_ns() -> Option<std::collections::BTreeMap<&'static str, u128>> {
     None
 }
+
+/// Runs an expression inside a named span, so that it appears in the stage profile.
+#[cfg(feature = "stage-profile")]
+#[macro_export]
+macro_rules! stage {
+    ($name:literal, $body:expr) => {{
+        let _span = tracing::info_span!($name).entered();
+        $body
+    }};
+}
+
+/// Runs an expression. Stage profiling is compiled out without the `stage-profile` feature.
+#[cfg(not(feature = "stage-profile"))]
+#[macro_export]
+macro_rules! stage {
+    ($name:literal, $body:expr) => {
+        $body
+    };
+}

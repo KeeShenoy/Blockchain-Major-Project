@@ -40,7 +40,7 @@ const UNSTORED_LEVELS: u32 = if cfg!(feature = "previous-compact-storage") {
 };
 
 /// Rows of a matrix over the LDE domain, with the partial Merkle tree committing to them.
-struct RowOracle<F: FieldElement, H: ElementHasher<BaseField = F::BaseField>> {
+pub(crate) struct RowOracle<F: FieldElement, H: ElementHasher<BaseField = F::BaseField>> {
     /// Row-major values, exactly `width` per row.
     rows: Vec<F>,
     width: usize,
@@ -49,7 +49,7 @@ struct RowOracle<F: FieldElement, H: ElementHasher<BaseField = F::BaseField>> {
 }
 
 impl<F: FieldElement, H: ElementHasher<BaseField = F::BaseField>> RowOracle<F, H> {
-    fn commit(rows: Vec<F>, width: usize) -> Self {
+    pub(crate) fn commit(rows: Vec<F>, width: usize) -> Self {
         let mut oracle = Self {
             rows,
             width,
@@ -63,11 +63,15 @@ impl<F: FieldElement, H: ElementHasher<BaseField = F::BaseField>> RowOracle<F, H
         self.rows.len() / self.width
     }
 
-    fn row(&self, index: usize) -> &[F] {
+    pub(crate) fn rows(&self) -> &[F] {
+        &self.rows
+    }
+
+    pub(crate) fn row(&self, index: usize) -> &[F] {
         &self.rows[index * self.width..(index + 1) * self.width]
     }
 
-    fn commitment(&self) -> H::Digest {
+    pub(crate) fn commitment(&self) -> H::Digest {
         self.upper_nodes[1]
     }
 
@@ -104,7 +108,7 @@ impl<F: FieldElement, H: ElementHasher<BaseField = F::BaseField>> RowOracle<F, H
 
     /// Returns the batch opening proof for `positions`, in the format of
     /// `MerkleTree::prove_batch`: the verifier checks it with the ordinary `MerkleTree`.
-    fn open(&self, positions: &[usize]) -> BatchMerkleProof<H> {
+    pub(crate) fn open(&self, positions: &[usize]) -> BatchMerkleProof<H> {
         let num_rows = self.num_rows();
         let depth = num_rows.ilog2() as usize;
         let subtrees = self.num_subtrees();
@@ -212,6 +216,49 @@ fn evaluate_exact_rows<F: FieldElement>(
             }
             fft::evaluate_poly(&mut column, twiddles);
             for (step, &value) in column.iter().enumerate() {
+                rows[(coset + step * blowup) * width + col] = value;
+            }
+        }
+        coset_shift *= generator;
+    }
+    rows
+}
+
+/// Evaluates polynomials whose degree may exceed the trace length, as the zero-knowledge prover's
+/// randomized columns do.
+///
+/// On a coset of the trace domain `X^n` is a constant, so the coefficients wrap around into `n`
+/// slots after scaling. Each coset then takes one trace-sized FFT, as in [`evaluate_exact_rows`].
+pub(crate) fn evaluate_long_columns<F: FieldElement>(
+    columns: &[Vec<F>],
+    domain: &StarkDomain<F::BaseField>,
+) -> Vec<F> {
+    let length = domain.trace_length();
+    let blowup = domain.trace_to_lde_blowup();
+    let lde_size = length * blowup;
+    let width = columns.len();
+    let generator = F::BaseField::get_root_of_unity(lde_size.ilog2());
+    let twiddles = domain.trace_twiddles();
+    let longest = columns.iter().map(Vec::len).max().unwrap_or(0);
+
+    let mut rows = vec![F::ZERO; lde_size * width];
+    let mut shift_powers = vec![F::BaseField::ONE; longest];
+    let mut buffer = vec![F::ZERO; length];
+    let mut coset_shift = domain.offset();
+
+    for coset in 0..blowup {
+        for power in 1..longest {
+            shift_powers[power] = shift_powers[power - 1] * coset_shift;
+        }
+        for (col, coefficients) in columns.iter().enumerate() {
+            buffer.fill(F::ZERO);
+            for (index, (&coefficient, &shift_power)) in
+                coefficients.iter().zip(&shift_powers).enumerate()
+            {
+                buffer[index % length] += coefficient.mul_base(shift_power);
+            }
+            fft::evaluate_poly(&mut buffer, twiddles);
+            for (step, &value) in buffer.iter().enumerate() {
                 rows[(coset + step * blowup) * width + col] = value;
             }
         }

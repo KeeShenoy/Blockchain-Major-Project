@@ -30,6 +30,9 @@ This single command, on Linux or WSL:
    `metadata.json` (revision, compiler, kernel, CPU, parameters), `report.md` (headline tables), and
    `charts/*.svg`. Earlier result directories are never modified.
 
+The `zk` mode draws fresh masks for every proof, so its proof size varies from proof to proof as the
+query positions do, independently of the witness. Its proving time includes mask generation.
+
 Charts and `report.md` are generated from that run's data; nothing is entered by hand.
 `python3 evaluation/run_benchmarks.py --from-raw <directory>` rebuilds every derived file from a
 run's `raw.jsonl`, without measuring again. `plot_graphs.py <directory>` regenerates just the charts.
@@ -44,7 +47,7 @@ queries, blowup 8, no grinding, no field extension). Only the FRI shape and prov
 
 | Experiment | What varies | Runs |
 |---|---|---|
-| `main` | 11 configurations at depth 7, one fixed witness | 15 processes each |
+| `main` | 12 configurations at depth 7, one fixed witness | 15 processes each |
 | `heap` | allocator-instrumented builds at depth 7 | 3 each (deterministic) |
 | `witness` | 30 different depth-7 witnesses | 1 process per witness and configuration |
 | `scaling` | depths 3, 7, 15, 31, 63 | 5 processes each, 1 heap run |

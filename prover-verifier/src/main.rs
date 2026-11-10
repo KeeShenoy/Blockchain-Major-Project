@@ -21,6 +21,10 @@ use prover_verifier::{
     prove, prove_trace_with, stages, verify_bytes, verify_with_options, CommitmentHasher,
     ProverMode, SessionId,
 };
+use prover_verifier::{
+    config::BLOWUP_FACTOR,
+    zk::{fresh_rng, prove_trace_zk, prove_zk, verify_zk, verify_zk_bytes, ZkParameters, ZkProof},
+};
 use serde::Serialize;
 use winterfell::{
     crypto::{Digest, Hasher},
@@ -40,8 +44,9 @@ const USAGE: &str = "usage:
 
   prove and verify also take --session-limb0 and --session-limb1, the verifier's challenge
 
-modes: baseline, split, folded-default, folded";
+modes: baseline, split, folded-default, folded, optimized, zk";
 
+const ZK_DEPTH_ERROR: &str = "zero-knowledge proofs need a tree depth of at least 7";
 const DEFAULT_PROVE_WARM_ITERATIONS: usize = 30;
 const DEFAULT_VERIFY_WARMUP_ITERATIONS: usize = 10;
 const DEFAULT_VERIFY_TIMED_ITERATIONS: usize = 100;
@@ -61,6 +66,7 @@ struct Options {
     prove_warm: Option<usize>,
     verify_warmup: Option<usize>,
     verify_iterations: Option<usize>,
+    zk: bool,
     fri_folding: Option<usize>,
     fri_remainder: Option<usize>,
     session_limb0: Option<String>,
@@ -88,6 +94,7 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
             "--witness" => options.witness = Some(value.into()),
             "--proof" => options.proof = Some(value.into()),
             "--proof-out" => options.proof_out = Some(value.into()),
+            "--mode" if value == "zk" => options.zk = true,
             "--mode" => {
                 options.mode = Some(
                     ProverMode::parse(value)
@@ -155,8 +162,11 @@ fn proof_digest(bytes: &[u8]) -> String {
 
 fn command_prove(options: Options) -> Result<ExitCode, String> {
     let witness = load_witness(options.witness.as_deref().ok_or("--witness is required")?)?;
-    let mode = options.mode.ok_or("--mode is required")?;
     let session = options.session()?;
+    if options.zk {
+        return command_prove_zk(witness, session, options.proof_out);
+    }
+    let mode = options.mode.ok_or("--mode is required")?;
     let out = options.proof_out.ok_or("--proof-out is required")?;
 
     let started = Instant::now();
@@ -177,9 +187,36 @@ fn command_prove(options: Options) -> Result<ExitCode, String> {
     Ok(ExitCode::SUCCESS)
 }
 
+/// Masks come from a freshly seeded stream: reusing them across proofs would break zero knowledge.
+fn command_prove_zk(
+    witness: Witness,
+    session: SessionId,
+    out: Option<PathBuf>,
+) -> Result<ExitCode, String> {
+    let out = out.ok_or("--proof-out is required")?;
+    let started = Instant::now();
+    let proof = prove_zk(&witness, session, &mut fresh_rng()).ok_or(ZK_DEPTH_ERROR)?;
+    let prove_ns = started.elapsed().as_nanos();
+    let bytes = proof.to_bytes();
+    fs::write(&out, &bytes).map_err(|error| format!("cannot write {}: {error}", out.display()))?;
+    print_json(&serde_json::json!({
+        "mode": "zk",
+        "tree_depth": witness.depth(),
+        "prove_ns": prove_ns,
+        "proof_size_bytes": bytes.len(),
+        "proof_digest": proof_digest(&bytes),
+        "peak_rss_bytes": read_process_memory().map(|memory| memory.peak_rss_bytes),
+    }));
+    Ok(ExitCode::SUCCESS)
+}
+
 fn command_verify(options: Options) -> Result<ExitCode, String> {
     let path = options.proof.as_deref().ok_or("--proof is required")?;
-    let mode = options.mode.ok_or("--mode is required")?;
+    let zk = options.zk;
+    let mode = options.mode;
+    if !zk && mode.is_none() {
+        return Err("--mode is required".into());
+    }
     let depth = options.depth.ok_or("--depth is required")?;
     merkle_core::validate_depth(depth).map_err(|error| error.to_string())?;
     let root = options
@@ -188,10 +225,16 @@ fn command_verify(options: Options) -> Result<ExitCode, String> {
     let bytes =
         fs::read(path).map_err(|error| format!("cannot read {}: {error}", path.display()))?;
 
-    let result = verify_bytes(&bytes, root, mode, depth, options.session()?);
+    let session = options.session()?;
+    let result = match mode {
+        Some(mode) if !zk => {
+            verify_bytes(&bytes, root, mode, depth, session).map_err(|error| error.to_string())
+        }
+        _ => verify_zk_bytes(&bytes, root, depth, session).map_err(|error| error.to_string()),
+    };
     let root_file = RootFile::from_elements(root);
     print_json(&serde_json::json!({
-        "mode": mode.label(),
+        "mode": mode.filter(|_| !zk).map_or("zk", ProverMode::label),
         "tree_depth": depth,
         "root_limb0": root_file.root_limb0,
         "root_limb1": root_file.root_limb1,
@@ -427,6 +470,125 @@ fn run_bench(plan: BenchPlan) -> Result<ExitCode, String> {
     })
 }
 
+/// The bench for the zero-knowledge mode. Same steps and fields as [`run_bench`].
+fn run_bench_zk(plan: BenchPlan) -> Result<ExitCode, String> {
+    let BenchPlan {
+        witness,
+        session,
+        trusted_root,
+        root_source,
+        prove_warm,
+        verify_warmup,
+        verify_iterations,
+        ..
+    } = plan;
+    let depth = witness.depth();
+    let parameters = ZkParameters::for_depth(depth).ok_or(ZK_DEPTH_ERROR)?;
+    stages::install();
+
+    let started = Instant::now();
+    let trace = build_trace(&witness, session);
+    let trace_build_ns = started.elapsed().as_nanos();
+    let started = Instant::now();
+    let proof = prove_trace_zk(trace, &parameters, session, &mut fresh_rng());
+    let prove_first_ns = started.elapsed().as_nanos();
+    let memory_after_first_prove = read_process_memory();
+    let heap_peak_first_prove_bytes = heap::report().map(|_| heap::peak_bytes());
+
+    stages::reset();
+    let mut warm_samples = Vec::with_capacity(prove_warm);
+    let mut trace_samples = Vec::with_capacity(prove_warm);
+    for _ in 0..prove_warm {
+        let started = Instant::now();
+        let trace = build_trace(&witness, session);
+        trace_samples.push(started.elapsed());
+        let started = Instant::now();
+        let repeat = prove_trace_zk(trace, &parameters, session, &mut fresh_rng());
+        warm_samples.push(started.elapsed());
+        drop(repeat);
+    }
+    let prove_stages_mean_ns = stages::totals_ns().map(|totals| {
+        totals
+            .into_iter()
+            .map(|(name, total)| (name, total / prove_warm.max(1) as u128))
+            .collect::<BTreeMap<_, _>>()
+    });
+
+    let started = Instant::now();
+    let bytes = proof.to_bytes();
+    let proof_serialize_ns = started.elapsed().as_nanos();
+    let started = Instant::now();
+    let decoded = ZkProof::from_bytes(&bytes, &parameters).map_err(|error| error.to_string())?;
+    let proof_deserialize_ns = started.elapsed().as_nanos();
+    drop(decoded);
+
+    let root = trusted_root.unwrap_or_else(|| witness.root());
+    let verify_once = || -> (Duration, Result<(), _>) {
+        let started = Instant::now();
+        let result = verify_zk(&proof, root, &parameters, session);
+        (started.elapsed(), result)
+    };
+    let (first_duration, first_result) = verify_once();
+    let mut verify_samples = Vec::with_capacity(verify_iterations);
+    if first_result.is_ok() {
+        for _ in 0..verify_warmup {
+            verify_once().1.map_err(|error| error.to_string())?;
+        }
+        for _ in 0..verify_iterations {
+            let (duration, result) = verify_once();
+            result.map_err(|error| error.to_string())?;
+            verify_samples.push(duration);
+        }
+    }
+
+    let security = parameters.security();
+    let root_file = RootFile::from_elements(root);
+    let verified = first_result.is_ok();
+    print_json(&BenchRecord {
+        mode: "zk",
+        uses_compact_storage: true,
+        tree_depth: depth,
+        num_leaves: 1u128 << depth,
+        trace_length: parameters.trace_length,
+        lde_domain_size: parameters.domain_size,
+        num_queries: parameters.num_queries,
+        blowup_factor: BLOWUP_FACTOR,
+        grinding_factor: 0,
+        fri_folding_factor: 0,
+        fri_remainder_max_degree: parameters.batched_length - 1,
+        fri_layers: 0,
+        conjectured_security_bits: security.conjectured_bits,
+        proven_security_ldr_bits: security.proven_ldr_bits,
+        proven_security_udr_bits: security.proven_udr_bits,
+        trace_build_ns,
+        prove_first_ns,
+        prove_warm: TimingSummary::from_samples(&mut warm_samples),
+        trace_build_warm: TimingSummary::from_samples(&mut trace_samples),
+        prove_stages_mean_ns,
+        memory_after_first_prove,
+        heap_peak_first_prove_bytes,
+        proof_size_bytes: bytes.len(),
+        proof_digest: proof_digest(&bytes),
+        proof_serialize_ns,
+        proof_deserialize_ns,
+        verify_first_ns: verified.then_some(first_duration.as_nanos()),
+        verify_warmup_iterations: verify_warmup,
+        verify: TimingSummary::from_samples(&mut verify_samples),
+        memory_at_exit: read_process_memory(),
+        heap: heap::report(),
+        root_limb0: root_file.root_limb0,
+        root_limb1: root_file.root_limb1,
+        root_source,
+        verified,
+        rejection_reason: first_result.err().map(|error| error.to_string()),
+    });
+    Ok(if verified {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::from(1)
+    })
+}
+
 fn bench_iterations(options: &Options) -> Result<(usize, usize), String> {
     // The two older environment variables remain accepted for existing runbooks.
     let environment = |name: &str, default: usize| match std::env::var(name) {
@@ -450,6 +612,23 @@ fn command_bench(options: Options) -> Result<ExitCode, String> {
     let witness = load_witness(options.witness.as_deref().ok_or("--witness is required")?)?;
     let trusted_root = options.root()?;
     let (verify_warmup, verify_iterations) = bench_iterations(&options)?;
+    if options.zk {
+        return run_bench_zk(BenchPlan {
+            proof_options: ProverMode::Optimized.proof_options(witness.depth()),
+            mode: ProverMode::Optimized,
+            session: options.session()?,
+            root_source: if trusted_root.is_some() {
+                "supplied"
+            } else {
+                "witness"
+            },
+            witness,
+            trusted_root,
+            prove_warm: options.prove_warm.unwrap_or(DEFAULT_PROVE_WARM_ITERATIONS),
+            verify_warmup,
+            verify_iterations,
+        });
+    }
     let mode = options.mode.ok_or("--mode is required")?;
     let default_fri = mode.proof_options(witness.depth()).to_fri_options();
     let proof_options = options_with_fri(

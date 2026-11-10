@@ -17,13 +17,14 @@ from xml.sax.saxutils import escape
 
 TEXT, MUTED, GRID, SURFACE = "#0b0b0b", "#52514e", "#e4e3df", "#fcfcfb"
 FONT = "font-family='system-ui, -apple-system, Segoe UI, sans-serif'"
-PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4"]
+PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#6250d6"]
 
 ORIGINAL_BASELINE = ("original", "baseline")
 ORIGINAL_FOLDED = ("original", "folded")
 PREVIOUS_FOLDED = ("previous", "folded")
 CURRENT_BASELINE = ("current", "baseline")
 CURRENT_OPTIMIZED = ("current", "optimized")
+CURRENT_ZK = ("current", "zk")
 
 # Color follows the configuration, so every chart in a run reads the same way.
 LINE_SERIES = [
@@ -32,6 +33,7 @@ LINE_SERIES = [
     (PREVIOUS_FOLDED, "Previous compact (FRI 16)", PALETTE[2]),
     (CURRENT_BASELINE, "Current baseline (FRI 8)", PALETTE[3]),
     (CURRENT_OPTIMIZED, "Current optimized", PALETTE[4]),
+    (CURRENT_ZK, "Zero knowledge", PALETTE[5]),
 ]
 BAR_CONFIGS = [
     (("original", "dynamic", "baseline"), "Original\nbaseline", PALETTE[0]),
@@ -41,6 +43,7 @@ BAR_CONFIGS = [
     (("current", "dynamic", "folded"), "Current\nfolded", PALETTE[3]),
     (("current", "dynamic", "split"), "Current\nsplit", PALETTE[3]),
     (("current", "dynamic", "optimized"), "Current\noptimized", PALETTE[4]),
+    (("current", "dynamic", "zk"), "Zero\nknowledge", PALETTE[5]),
 ]
 BUILD_CONFIGS = [
     (("current", "generic-arith", "optimized"), "Field-operator\nRescue", PALETTE[3]),
@@ -267,6 +270,11 @@ def stage_chart(stages, mode, depth):
         "evaluate_deep_composition_poly": "DEEP evaluation",
         "compute_fri_layers": "FRI layers / remainder",
         "build_proof_object": "Queries + proof object",
+        "zk_constraints": "Constraint evaluation",
+        "zk_trace_lde": "Masked trace LDE",
+        "zk_trace_commit": "Trace commitment",
+        "zk_composition_lde": "Masked composition LDE",
+        "zk_composition_commit": "Composition commitment",
     }
     items = [("Trace build (Rescue)", entry["trace_build_warm"]["mean_ns"] / 1e3)]
     items += [(names[key], value / 1e3) for key, value in entry["prove_stages_mean_ns"].items()
@@ -310,7 +318,7 @@ def main():
     stages_file = directory / "stages.json"
     if stages_file.exists():
         stages = json.loads(stages_file.read_text(encoding="utf-8"))
-        for mode in ("baseline", "optimized"):
+        for mode in ("baseline", "optimized", "zk"):
             for depth in (7, 31):
                 save(f"stages_{mode}_depth{depth}", stage_chart(stages, mode, depth))
     print(output)

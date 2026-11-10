@@ -23,14 +23,16 @@ proof verification.
 | Credential tree | Rescue-XLIX Merkle tree (`merkle-core`), shared by the issuer and the prover. |
 | `baseline` mode | FRI folding factor 8, Winterfell's default storage. The reference STARK. |
 | `optimized` mode (recommended) | Compact storage, and an FRI shape chosen by measurement. Same query count, blowup, grinding, field, and reported security. |
+| `zk` mode | **Zero knowledge**: masked trace, quotient, and batched polynomial, with a separate transcript and proof format. Built on Winterfell's public crates. Depth 7 and above. |
 | `folded` mode | FRI folding factor 16 with compact storage. The earlier optimized configuration, kept for comparison. |
 | Compact storage | Partial Merkle trees and exact-width rows (`prover-verifier/src/compact.rs`). Output is byte-identical to Winterfell's default storage. |
 | Session binding | An optional verifier challenge in the public inputs (`--session-limb0`, `--session-limb1`), which prevents replay. |
 | Trust anchor | `ethereum/contracts/CredentialRegistry.sol`: issuer-only `publishRoot`, public `getRoot`. |
 
 The proposal's eSTARK extended AIR, Split's circuit partitioning, and Ligerolight's batch zk-IPA are
-**not** implemented. `docs/methodology.md` explains why, and what is used instead. The proof is not
-formally zero knowledge; `docs/security-and-privacy.md` lists what can honestly be claimed.
+**not** implemented. `docs/methodology.md` explains why, and what is used instead. Only the `zk` mode
+is zero knowledge: `docs/zero-knowledge.md` gives the construction and security argument, and
+`docs/security-and-privacy.md` lists what each mode can claim.
 
 ## Requirements
 
@@ -83,8 +85,8 @@ target/release/prover-verifier verify --proof proof.bin --mode optimized --depth
 ```
 
 `verify` prints a JSON record and exits with code 0 when the proof is accepted, 1 when it is
-rejected, and 2 for invalid input. The modes are `baseline`, `folded`, `optimized`, and, for ablation
-only, `split` (folding factor 8 with compact storage) and `folded-default` (folding factor 16 with
+rejected, and 2 for invalid input. The modes are `baseline`, `folded`, `optimized`, `zk`, and, for
+ablation only, `split` (folding factor 8 with compact storage) and `folded-default` (folding factor 16 with
 Winterfell's storage). To bind a proof to a session, pass the verifier's challenge to both `prove`
 and `verify` with `--session-limb0` and `--session-limb1`.
 

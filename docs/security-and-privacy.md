@@ -1,5 +1,9 @@
 # Security and privacy
 
+**The `zk` mode provides zero knowledge; every other mode does not.** The construction, the
+simulation argument, and the assumptions are in [`zero-knowledge.md`](zero-knowledge.md). The tables
+below distinguish the modes.
+
 What the proof system guarantees, what was fixed in this revision, and what it does not guarantee.
 Each fix has a regression test in `prover-verifier/tests/correctness.rs` or
 `merkle-core/src/witness.rs`. The end-to-end script `evaluation/run_e2e.sh` repeats the main
@@ -131,41 +135,26 @@ per session.
 
 ### What can honestly be claimed
 
-| Property | Status |
-|---|---|
-| Transparent setup | **Yes**. No trusted setup; hash-based. |
-| Witness not disclosed directly | **Yes**. Credential, path, and index are not in the proof in the clear (`proof_bytes_do_not_contain_witness_values`). |
-| Leaf position hidden from a verifier without the batch | **Yes against the concrete column-6 attack**, for depth ≥ 7. Not a formal zero-knowledge statement. |
-| Replay protection | **When a session challenge is used.** |
-| Formal zero knowledge | **No.** |
-| Hiding from a verifier who knows the batch | **No.** Demonstrated by `verifier_who_knows_the_batch_can_identify_the_holder`. |
-| Unlinkability | **No.** For the same session and witness the proof is identical, and a batch-aware verifier can link proofs. |
+| Property | `zk` mode | Other modes |
+|---|---|---|
+| Transparent setup | **Yes** | **Yes** |
+| Witness not disclosed directly | **Yes** | **Yes** |
+| Zero knowledge (honest-verifier, and non-interactive in the random-oracle model) | **Yes**: statistical given uniform masks, computational with the ChaCha20 mask stream | **No** |
+| Hiding from a verifier who knows the whole batch | **Yes** (`verifier_who_knows_the_batch_cannot_match_openings_to_a_holder`) | **No** (`verifier_who_knows_the_batch_can_identify_the_holder`) |
+| Hiding of the leaf position | **Yes** | Against the column-6 attack only, for depth ≥ 7 |
+| Unlinkability of a holder's proofs | **Yes**, given fresh masks per proof | **No** |
+| Replay protection | **When a session challenge is used** | **When a session challenge is used** |
+| Perfect zero knowledge | **No** | **No** |
 
-### Not provided: zero knowledge
+These are not interchangeable properties: `zero-knowledge.md` defines each. Side channels on the
+prover are out of scope.
 
-Winterfell 0.13 does not implement zero-knowledge STARKs: there is no trace randomization and no
-masking of the composition or FRI polynomials. The columns holding the Rescue states (0-5) are not
-blinded. The proof therefore does not formally hide the witness. In particular:
+### The non-zero-knowledge modes
 
-- **A verifier who knows the batch can identify the holder.** The issuer, or anyone holding all
-  credentials, can recompute the trace for each candidate leaf and compare it with the opened rows.
-  The test named above runs this.
-- The opened rows and the FRI data are linear combinations of trace values, so information leaks to
-  an adversary able to solve the resulting algebraic system.
-
-**The smallest sound path to zero knowledge within this architecture** has two parts, and neither
-is reachable through Winterfell's public API alone:
-
-1. Append random rows to every trace column, at least as many as the number of evaluations revealed
-   per column (about 30 here, plus FRI data). Since traces are powers of two, this doubles the trace,
-   and so roughly doubles proving time and memory.
-2. Add a random masking polynomial to the DEEP composition and FRI, committed before the query
-   phase. `generate_proof` in `winter-prover` is not extensible at that point, so this requires a
-   patched `winter-prover` and a matching verifier change, or a later Winterfell version with
-   zero-knowledge support.
-
-Neither part changes the transparent setup or the framework. Both cost performance, so they are
-left as an explicit decision for the project rather than done silently.
+`baseline`, `folded`, `split`, and `optimized` are kept as reference configurations and are unchanged.
+Winterfell 0.13 does not randomize their trace, composition, or FRI data. A verifier who knows the
+batch can identify the holder, because for a candidate credential every trace value is determined,
+and the opened rows either lie on its extension or do not.
 
 ### Root rotation
 

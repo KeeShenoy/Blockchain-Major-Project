@@ -1,0 +1,192 @@
+[
+  {
+    "mode": "baseline",
+    "tree_depth": 7,
+    "prove_warm": {
+      "iterations": 200,
+      "total_ns": 332168774,
+      "mean_ns": 1660843.87,
+      "median_ns": 1614957,
+      "min_ns": 1567163,
+      "max_ns": 2930366
+    },
+    "trace_build_warm": {
+      "iterations": 200,
+      "total_ns": 113609779,
+      "mean_ns": 568048.895,
+      "median_ns": 553128,
+      "min_ns": 545915,
+      "max_ns": 890082
+    },
+    "prove_stages_mean_ns": {
+      "build_composition_poly_columns": 48401,
+      "build_deep_composition_poly": 48070,
+      "build_domain": 7529,
+      "build_proof_object": 35216,
+      "commit_to_constraint_evaluations": 317136,
+      "commit_to_main_trace_segment": 314047,
+      "compute_constraint_evaluation_commitment": 106463,
+      "compute_execution_trace_commitment": 105741,
+      "compute_fri_layers": 51363,
+      "determine_query_positions": 3396,
+      "evaluate_composition_poly_columns": 160820,
+      "evaluate_constraints": 774416,
+      "evaluate_deep_composition_poly": 33392,
+      "extend_execution_trace": 207476
+    }
+  },
+  {
+    "mode": "optimized",
+    "tree_depth": 7,
+    "prove_warm": {
+      "iterations": 200,
+      "total_ns": 328416023,
+      "mean_ns": 1642080.115,
+      "median_ns": 1622265,
+      "min_ns": 1588223,
+      "max_ns": 1975951
+    },
+    "trace_build_warm": {
+      "iterations": 200,
+      "total_ns": 112064940,
+      "mean_ns": 560324.7,
+      "median_ns": 547839,
+      "min_ns": 546012,
+      "max_ns": 662850
+    },
+    "prove_stages_mean_ns": {
+      "build_deep_composition_poly": 47947,
+      "build_domain": 7191,
+      "build_proof_object": 60964,
+      "commit_to_constraint_evaluations": 299859,
+      "commit_to_main_trace_segment": 315518,
+      "compute_fri_layers": 47171,
+      "determine_query_positions": 3235,
+      "evaluate_constraints": 753790,
+      "evaluate_deep_composition_poly": 31955
+    }
+  },
+  {
+    "mode": "zk",
+    "tree_depth": 7,
+    "prove_warm": {
+      "iterations": 200,
+      "total_ns": 402164823,
+      "mean_ns": 2010824.115,
+      "median_ns": 1980855,
+      "min_ns": 1931236,
+      "max_ns": 2414069
+    },
+    "trace_build_warm": {
+      "iterations": 200,
+      "total_ns": 113012239,
+      "mean_ns": 565061.195,
+      "median_ns": 547646,
+      "min_ns": 545916,
+      "max_ns": 1129335
+    },
+    "prove_stages_mean_ns": {
+      "zk_composition_commit": 137962,
+      "zk_composition_lde": 303970,
+      "zk_constraints": 922610,
+      "zk_open": 2030,
+      "zk_trace_commit": 106267,
+      "zk_trace_lde": 269795
+    }
+  },
+  {
+    "mode": "baseline",
+    "tree_depth": 31,
+    "prove_warm": {
+      "iterations": 200,
+      "total_ns": 1411217382,
+      "mean_ns": 7056086.91,
+      "median_ns": 6956218,
+      "min_ns": 6405398,
+      "max_ns": 11320947
+    },
+    "trace_build_warm": {
+      "iterations": 200,
+      "total_ns": 457639463,
+      "mean_ns": 2288197.315,
+      "median_ns": 2241553,
+      "min_ns": 2184432,
+      "max_ns": 3394928
+    },
+    "prove_stages_mean_ns": {
+      "build_composition_poly_columns": 214479,
+      "build_deep_composition_poly": 172820,
+      "build_domain": 25332,
+      "build_proof_object": 51828,
+      "commit_to_constraint_evaluations": 1578938,
+      "commit_to_main_trace_segment": 1603850,
+      "compute_constraint_evaluation_commitment": 475574,
+      "compute_execution_trace_commitment": 476045,
+      "compute_fri_layers": 196105,
+      "determine_query_positions": 4024,
+      "evaluate_composition_poly_columns": 885686,
+      "evaluate_constraints": 3147536,
+      "evaluate_deep_composition_poly": 156131,
+      "extend_execution_trace": 1126125
+    }
+  },
+  {
+    "mode": "optimized",
+    "tree_depth": 31,
+    "prove_warm": {
+      "iterations": 200,
+      "total_ns": 1366304118,
+      "mean_ns": 6831520.59,
+      "median_ns": 6777259,
+      "min_ns": 6566567,
+      "max_ns": 8191716
+    },
+    "trace_build_warm": {
+      "iterations": 200,
+      "total_ns": 449387929,
+      "mean_ns": 2246939.645,
+      "median_ns": 2234244,
+      "min_ns": 2186163,
+      "max_ns": 2509174
+    },
+    "prove_stages_mean_ns": {
+      "build_deep_composition_poly": 172937,
+      "build_domain": 25042,
+      "build_proof_object": 78685,
+      "commit_to_constraint_evaluations": 1382109,
+      "commit_to_main_trace_segment": 1656843,
+      "compute_fri_layers": 207120,
+      "determine_query_positions": 3816,
+      "evaluate_constraints": 3022709,
+      "evaluate_deep_composition_poly": 152560
+    }
+  },
+  {
+    "mode": "zk",
+    "tree_depth": 31,
+    "prove_warm": {
+      "iterations": 200,
+      "total_ns": 1457160469,
+      "mean_ns": 7285802.345,
+      "median_ns": 7174795,
+      "min_ns": 6978431,
+      "max_ns": 9504626
+    },
+    "trace_build_warm": {
+      "iterations": 200,
+      "total_ns": 455134710,
+      "mean_ns": 2275673.55,
+      "median_ns": 2248765,
+      "min_ns": 2187125,
+      "max_ns": 3211353
+    },
+    "prove_stages_mean_ns": {
+      "zk_composition_commit": 433771,
+      "zk_composition_lde": 1159144,
+      "zk_constraints": 3292086,
+      "zk_open": 2306,
+      "zk_trace_commit": 433275,
+      "zk_trace_lde": 1277105
+    }
+  }
+]

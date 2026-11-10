@@ -13,6 +13,7 @@ pub mod memory;
 pub mod prover;
 pub mod stages;
 pub mod verifier;
+pub mod zk;
 
 pub use air::SessionId;
 pub use config::{CommitmentHasher, ProverMode};

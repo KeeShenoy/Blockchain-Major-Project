@@ -58,6 +58,7 @@ MAIN_CONFIGS = [
     ("current", "dynamic", "split"),
     ("current", "dynamic", "folded"),
     ("current", "dynamic", "optimized"),
+    ("current", "dynamic", "zk"),
     ("current", "generic-arith", "optimized"),
     ("current", "v3", "optimized"),
     ("current", "static", "optimized"),
@@ -72,6 +73,7 @@ HEAP_CONFIGS = [
     ("current", "alloc-profile", "folded-default"),
     ("current", "alloc-profile", "folded"),
     ("current", "alloc-profile", "optimized"),
+    ("current", "alloc-profile", "zk"),
 ]
 COMPARED_CONFIGS = [
     ("original", "dynamic", "baseline"),
@@ -81,6 +83,7 @@ COMPARED_CONFIGS = [
     ("current", "dynamic", "split"),
     ("current", "dynamic", "folded"),
     ("current", "dynamic", "optimized"),
+    ("current", "dynamic", "zk"),
 ]
 SWEEP_FOLDING = (2, 4, 8, 16)
 SWEEP_REMAINDER = (31, 63, 127, 255)
@@ -308,14 +311,16 @@ def experiment_witnesses(recorder, binaries, issuer, verify_iterations):
 def experiment_scaling(recorder, binaries, issuer, runs):
     for depth in SCALING_DEPTHS:
         witness = fixture(issuer, depth, 7)
+        # Zero knowledge needs a trace longer than the masks: see ZkParameters::for_depth.
+        configs = [c for c in COMPARED_CONFIGS if c[2] != "zk" or depth >= 7]
         for run_index in range(runs):
-            order = COMPARED_CONFIGS if run_index % 2 == 0 else list(reversed(COMPARED_CONFIGS))
+            order = configs if run_index % 2 == 0 else list(reversed(configs))
             for position, (implementation, build, mode) in enumerate(order):
                 record = bench(binaries[(implementation, build)], witness, mode, 10, 5, 30)
                 recorder.add(record, experiment="scaling", implementation=implementation,
                              build=build, mode=mode, run=run_index, order=position,
                              witness_seed=7)
-        for implementation, _, mode in COMPARED_CONFIGS:
+        for implementation, _, mode in configs:
             record = bench(binaries[(implementation, "alloc-profile")], witness, mode, 0, 0, 1)
             recorder.add(record, experiment="scaling-heap", implementation=implementation,
                          build="alloc-profile", mode=mode, run=0, order=0, witness_seed=7)
@@ -326,7 +331,7 @@ def experiment_stages(recorder, binaries, issuer, prove_warm):
     binary = binaries[("current", "stage-profile")]
     for depth in (MAIN_DEPTH, 31):
         witness = fixture(issuer, depth, 7)
-        for mode in ("baseline", "optimized"):
+        for mode in ("baseline", "optimized", "zk"):
             record = bench(binary, witness, mode, prove_warm, 0, 1)
             recorder.add(record, experiment="stages", implementation="current",
                          build="stage-profile", mode=mode, run=0, order=0, witness_seed=7)
@@ -422,12 +427,16 @@ def paired(rows, experiment, metric_name, treatment, control, key="run", depth=N
 
 
 OPTIMIZED = ("current", "dynamic", "optimized")
+ZK = ("current", "dynamic", "zk")
 ORIGINAL_BASELINE = ("original", "dynamic", "baseline")
 ORIGINAL_FOLDED = ("original", "dynamic", "folded")
 PREVIOUS_FOLDED = ("previous", "dynamic", "folded")
 PREVIOUS_SPLIT = ("previous", "dynamic", "split")
 COMPARISONS = [
     # (label, treatment, control)
+    ("zero knowledge vs optimized", ZK, OPTIMIZED),
+    ("zero knowledge vs original baseline", ZK, ORIGINAL_BASELINE),
+    ("zero knowledge vs original folded", ZK, ORIGINAL_FOLDED),
     ("optimized vs original baseline", OPTIMIZED, ORIGINAL_BASELINE),
     ("optimized vs original folded", OPTIMIZED, ORIGINAL_FOLDED),
     ("optimized vs previous folded", OPTIMIZED, PREVIOUS_FOLDED),
@@ -450,6 +459,10 @@ COMPARISONS = [
     ("build: static vs dynamic", ("current", "static", "optimized"), OPTIMIZED),
 ]
 HEAP_COMPARISONS = [
+    ("heap: zero knowledge vs optimized", ("current", "alloc-profile", "zk"),
+     ("current", "alloc-profile", "optimized")),
+    ("heap: zero knowledge vs original baseline", ("current", "alloc-profile", "zk"),
+     ("original", "alloc-profile", "baseline")),
     ("heap: optimized vs original baseline", ("current", "alloc-profile", "optimized"),
      ("original", "alloc-profile", "baseline")),
     ("heap: optimized vs original folded", ("current", "alloc-profile", "optimized"),
@@ -460,6 +473,8 @@ HEAP_COMPARISONS = [
      ("current", "alloc-profile", "folded-default")),
 ]
 SCALING_COMPARISONS = [
+    ("zero knowledge vs optimized", ZK, OPTIMIZED),
+    ("zero knowledge vs original baseline", ZK, ORIGINAL_BASELINE),
     ("optimized vs original baseline", OPTIMIZED, ORIGINAL_BASELINE),
     ("optimized vs original folded", OPTIMIZED, ORIGINAL_FOLDED),
 ]
@@ -558,7 +573,8 @@ def write_report(directory, summary, comparisons, info):
         return None
 
     columns = [("Original baseline", ORIGINAL_BASELINE), ("Original folded", ORIGINAL_FOLDED),
-               ("Previous folded", PREVIOUS_FOLDED), ("Current optimized", OPTIMIZED)]
+               ("Previous folded", PREVIOUS_FOLDED), ("Current optimized", OPTIMIZED),
+               ("Zero knowledge", ZK)]
     def heap(config):
         return (config[0], "alloc-profile", config[2])
     rows = [

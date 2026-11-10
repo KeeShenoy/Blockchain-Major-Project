@@ -14,7 +14,46 @@ under the definitions in [`benchmarking.md`](benchmarking.md). Tables show media
 are 95% bootstrap intervals for the median paired difference, and an interval that contains zero means
 **no established difference**.
 
-## Summary (depth 7, 128 credentials)
+## Zero-knowledge cost (run `20261109T175338Z`)
+
+The `zk` mode is the only one with zero knowledge; its construction and proof are in
+[`zero-knowledge.md`](zero-knowledge.md). Same machine and method. Depth 7, medians. The sections
+further down are the non-zero-knowledge results from the previous run.
+
+| Metric | Original baseline | Optimized, no ZK | **Zero knowledge** | ZK vs optimized | ZK vs original baseline |
+|---|---:|---:|---:|---|---|
+| Trace build | 810.7 µs | 569.1 µs | 567.4 µs | 0.0% [−0.7, +2.4] | **−29.9%** [−31.2, −24.4] |
+| Proving only | 1,875.4 µs | 1,675.0 µs | 2,061.3 µs | **+22.0%** [+21.0, +28.0] | +9.9% [+7.4, +27.0] |
+| Trace build + proving | 2,686.0 µs | 2,244.3 µs | 2,628.8 µs | **+16.4%** [+15.5, +22.4] | −2.1% [−4.5, +9.1], not established |
+| Verification (30 witnesses) | 214.7 µs | 122.7 µs | 158.8 µs | **+28.6%** [+27.2, +30.5] | **−25.1%** [−29.5, −23.1] |
+| Proof size (30 witnesses) | 15,799 B | 12,824 B | 19,045 B | **+48.2%** [+45.3, +51.2] | +19.7% [+18.0, +23.6] |
+| Peak proving heap | 235,519 B | 150,770 B | 214,083 B | **+42.0%** | **−9.1%** |
+| Peak RSS after proving | 3,665,920 B | 3,452,928 B | 3,801,088 B | +9.7% [+8.1, +10.7] | +3.4% [+0.8, +4.5] |
+| Reported security (conj / LDR / UDR bits) | 83 / 41 / 23 | 83 / 41 / 23 | 84 / 41 / 27 | | |
+
+**Zero knowledge costs far less than the 2× previously estimated**, and the evaluation domain does
+not change. Against the original baseline, the zero-knowledge prover is about the same speed end to
+end, verifies 25% faster, and uses less heap, while adding zero knowledge. Its proof is 20% larger.
+
+The cost comes from 37 queries instead of 28 (the masked code rate is higher, so more queries keep the
+security target), three more composition columns plus the batching mask, one extra trace column, and
+mask generation.
+
+Proving stages for `zk` at depth 7 (mean of 2,011 µs): constraint evaluation 923 µs, composition LDE
+304 µs, trace LDE 270 µs, composition commitment 138 µs, trace commitment 106 µs.
+
+| Depth | Trace + prove | Verification | Proof size | Peak heap | Peak RSS | Queries | Security |
+|---|---|---|---|---|---|---|---|
+| 7 | 2.242 → 2.633 ms | 121.4 → 160.6 µs | 12,693 → 19,141 B | 150,770 → 214,691 B | 3,320 → 3,700 KiB | 37 | 84 / 41 / 27 |
+| 15 | 4.412 → 4.817 ms | 158.7 → 170.8 µs | 15,769 → 19,805 B | 294,116 → 369,709 B | 3,520 → 3,728 KiB | 32 | 84 / 42 / 25 |
+| 31 | 8.860 → 9.342 ms | 215.1 → 219.4 µs | 19,739 → 22,283 B | 586,486 → 687,503 B | 3,596 → 4,100 KiB | 30 | 83 / 42 / 24 |
+| 63 | 18.650 → 18.973 ms | 255.5 → 322.9 µs | 26,113 → 27,655 B | 1,220,728 → 1,362,049 B | 4,368 → 4,744 KiB | 29 | 83 / 42 / 23 |
+
+Each pair is optimized without ZK → zero knowledge, with five runs per depth and one witness per
+depth. The masks are close to a fixed size, so the relative cost shrinks as the trace grows. Depths
+below 7 are unsupported.
+
+## Summary without zero knowledge (depth 7, 128 credentials; run `20261109T134412Z`)
 
 | Metric | Original baseline | Original folded | Current optimized | vs original baseline | vs original folded |
 |---|---:|---:|---:|---|---|
@@ -159,9 +198,9 @@ numbers differ; it does not rank the systems.** Published values are as the pape
 | Hash inside the proof | Rescue (algebraic) | SHA-256 (bitwise) | None; hashes only for commitments |
 | Size of the statement | 256 rows × 7 columns; 32 hashes | 897,551 constraints; about 27,000 per hash | 1,024 trace elements |
 | Proof system | Winterfell STARK (AIR + FRI) | Ligero-style IOP with batch zk-IPA | Tutorial-style STARK prototype |
-| Zero knowledge | No | Yes | Not evaluated |
+| Zero knowledge | Only in `zk` mode (figures below are `optimized`) | Yes | Not evaluated |
 | Field | 128-bit | 64-bit (2^64 − 2^32 + 1) | 32-bit (3,221,225,473) |
-| Security | 83 bits conjectured, 41 proven | 100 bits (conjectured FRI soundness), 33 queries | Not stated as a level |
+| Security | 83 bits conjectured (84 for `zk` at depth 7), 41 proven | 100 bits (conjectured FRI soundness), 33 queries | Not stated as a level |
 | Commitment hash | Blake3-256 | Merkle trees (hash not compared here) | SHA3-256 |
 | Language | Rust | C++ | Go |
 | Hardware | i5-8250U, one core, WSL2 | Ryzen 3900X, one core, 64 GB | Apple M1 (also Pi, x86-64, emulated PPC64) |
@@ -176,8 +215,9 @@ numbers differ; it does not rank the systems.** Published values are as the pape
   because it is bitwise. Rescue was designed for this: one hash is 8 rows of 7 columns. Ligerolight's
   depth-32 circuit has 897,551 constraints against our 1,785 transition checks over 255 steps. This
   is the main reason, and it reflects the choice of hash, not a better proof system.
-- **We provide less.** Ligerolight is zero knowledge at 100-bit security. Ours is not, and reports 83
-  conjectured bits. Reaching parity would cost more.
+- **The settings differ.** Ligerolight is zero knowledge at 100-bit security. The figures above are
+  for our `optimized` mode at 83 bits, without zero knowledge. Our `zk` mode at depth 31 takes 9.3 ms
+  and 22.3 KB, at 83 bits.
 - **Paper 15 tested an unoptimized teaching prototype.** It states that its implementation does not
   use FFT-based optimizations for polynomial evaluation or Merkle tree construction, and that its
   AIR-like checking is limited. Its numbers are not a performance target for a production-grade
@@ -201,10 +241,10 @@ All run on the final code:
 
 - `cargo fmt --all -- --check` and `cargo clippy --workspace --all-targets -- -D warnings` with each
   measurement feature: clean.
-- `cargo test --workspace`: 36 tests passed (5 issuer, 10 merkle-core, 1 unit and 20 integration in
-  prover-verifier).
+- `cargo test --workspace`: 56 tests passed (5 issuer, 10 merkle-core, and in prover-verifier 5 unit,
+  20 correctness, and 16 zero-knowledge).
 - `npm test`: 7 passed.
-- `bash evaluation/run_e2e.sh`: 28 checks passed (`evaluation/results/e2e-20261109T145520Z/`). The
+- `bash evaluation/run_e2e.sh`: all checks passed, including the `zk` mode (`evaluation/results/e2e-20261109T174300Z/`). The
   root fetched from Ethereum is used; baseline, folded, and optimized proofs verify against it; wrong
   roots, swapped limbs, wrong depth, wrong mode, corrupted proofs, tampered witnesses, and non-canonical
   witnesses are rejected; a session-bound proof is rejected in another session; and an old batch's
@@ -220,7 +260,7 @@ All run on the final code:
 | 1. Eliminate trusted setup | **Achieved** | Hash-based Winterfell STARK; no setup step | |
 | 2. Reduce prover memory through witness partitioning and memory optimization | **Achieved for memory; partial for the method** | Heap −36.0%; RSS −8.8% default, −39.0% static | The witness itself is not partitioned; the saving comes from commitment storage. RSS is mostly program image at this scale. |
 | 3. Improve proving time through workflow optimization and efficient batching | **Achieved for time; partial for batching** | Trace + prove −14.0% against the original baseline | The gain is arithmetic, not batching. Batching is Winterfell's existing multiproofs and DEEP, used equally in the baseline. |
-| 4. Maintain efficient verification, security, correctness, transparency | **Achieved, with a privacy limit** | Verification −42.2%, soundness bugs fixed, parameters and reported security unchanged, replay protection added | Not formally zero knowledge; a verifier who knows the batch can identify the holder |
+| 4. Maintain efficient verification, security, correctness, transparency | **Achieved** | Verification −42.2% (`optimized`) or −25.1% (`zk`) against the original baseline; soundness bugs fixed; security held; replay protection added; zero knowledge in `zk` mode | Zero knowledge holds in the random-oracle model, only in `zk` mode |
 | 5. Evaluate against a baseline | **Achieved** | Paired benchmarks, 5 depths, automatic CSV/JSON/graphs | Single machine; depths 31 and 63 use generated paths |
 
 ## Trade-offs
@@ -232,4 +272,4 @@ All run on the final code:
 | Session binding | Replay protection when used | Two extra public inputs; no measurable cost |
 | Column-6 blinding | Hides the leaf index from the column attack | Weaker constraint on free rows, by design |
 | Blake3-192 (not adopted) | −10.4% proof | Collision resistance 128 → 96 bits |
-| Formal zero knowledge (not done) | Real witness hiding | About 2× proving time and memory, and a patched Winterfell prover |
+| Zero knowledge (`zk` mode) | Transcript simulatable without the witness | Against `optimized`: +16.4% proving, +28.6% verification, +48.2% proof size, +42.0% heap |

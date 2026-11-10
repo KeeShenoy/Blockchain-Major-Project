@@ -33,12 +33,24 @@ Winterfell 0.13.1 provides the STARK. All project code reaches it through public
 |---|---|---|---|---|
 | `baseline` | 8 | 31 | Winterfell default | Reference STARK |
 | `folded` | 16 | 31 | Compact | The earlier optimized configuration, kept for comparison |
-| `optimized` | 4 | `min(trace length − 1, 255)` | Compact | Recommended configuration |
+| `optimized` | 4 | `min(trace length − 1, 255)` | Compact | Recommended without zero knowledge |
+| `zk` | None (polynomial sent in full) | Masked DEEP polynomial | Compact | **Zero knowledge.** Recommended where privacy is required |
 | `split` | 8 | 31 | Compact | Ablation: storage change alone |
 | `folded-default` | 16 | 31 | Winterfell default | Ablation: folding factor alone |
 
-Every mode uses 28 queries, blowup 8, no grinding, and the 128-bit field, and reports the same
-security: 83 conjectured, 41 proven (list decoding), 23 proven (unique decoding).
+The non-zero-knowledge modes use 28 queries, blowup 8, no grinding, and the 128-bit field, and report
+83 conjectured, 41 proven (list decoding), and 23 proven (unique decoding) bits. The `zk` mode uses
+the same blowup and field but more queries (37 at depth 7), because masking raises the code rate. It
+reports 84, 41, and 27 bits.
+
+### Zero knowledge
+
+The `zk` mode randomizes every polynomial the verifier sees. See [`zero-knowledge.md`](zero-knowledge.md)
+for the construction and its proof. In short: each trace column gains a multiple of the vanishing
+polynomial of the trace domain; one extra committed column pads the quotient's dependence on the next
+row; quotient chunks are masked so that they still recompose; and the batched polynomial is masked by
+a uniform polynomial of the same size. The AIR, Rescue arithmetic, and compact storage are shared
+with the other modes.
 
 ### Optimizations in the code, and what supports them
 
@@ -131,7 +143,7 @@ needs to change.
 | "eSTARK-based transparent proving pipeline" / "Extended AIR" | "transparent STARK proving pipeline (Winterfell) using AIR" | No eAIR arguments are used |
 | "Split-inspired witness partitioning" | "compact commitment storage: partial Merkle trees and exact-width rows" | Split's circuit partitioning is not used |
 | "Ligerolight-inspired batched query and opening" | "batched openings through Merkle multiproofs and DEEP composition, with a measured FRI configuration" | The zk-IPA is not used |
-| "non-interactive zero-knowledge proof" | "non-interactive proof that does not reveal the witness directly; formal zero knowledge is not provided" | Winterfell 0.13 has no ZK; see `security-and-privacy.md` |
+| "non-interactive zero-knowledge proof" | Keep. It now holds for the `zk` mode: "non-interactive zero-knowledge proof in the random-oracle model" | Implemented; see `zero-knowledge.md` |
 | Flow diagram stages "Extended AIR", "Split: memory paging", "Ligerolight: batched opening" | "AIR", "Trace + compact storage", "DEEP + FRI + multiproofs" | Same reasons |
 
 Objective 2 mentions "witness partitioning". What is delivered is memory optimization of the

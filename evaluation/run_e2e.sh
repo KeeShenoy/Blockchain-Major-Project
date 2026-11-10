@@ -109,6 +109,34 @@ expect_exit 1 "baseline proof rejected in folded mode" \
 expect_exit 1 "optimized proof rejected in baseline mode" \
     verify baseline "${out}/optimized.proof" "${depth}" "${limb0}" "${limb1}"
 
+echo "== zero knowledge"
+expect_exit 0 "zk: prove" \
+    "${pv}" prove --witness "${issued_witness}" --mode zk --proof-out "${out}/zk.proof"
+expect_exit 0 "zk: proof verifies against the fetched root" \
+    verify zk "${out}/zk.proof" "${depth}" "${limb0}" "${limb1}"
+expect_exit 0 "zk: a second proof of the same witness" \
+    "${pv}" prove --witness "${issued_witness}" --mode zk --proof-out "${out}/zk2.proof"
+if cmp -s "${out}/zk.proof" "${out}/zk2.proof"; then
+    fail "zk: repeated proofs are identical"
+else
+    pass "zk: repeated proofs differ (fresh randomness)"
+fi
+expect_exit 1 "zk: wrong root rejected" \
+    verify zk "${out}/zk.proof" "${depth}" "${wrong_limb0}" "${limb1}"
+expect_exit 1 "zk: wrong tree depth rejected" \
+    verify zk "${out}/zk.proof" 15 "${limb0}" "${limb1}"
+expect_exit 1 "optimized proof rejected in zk mode" \
+    verify zk "${out}/optimized.proof" "${depth}" "${limb0}" "${limb1}"
+zk_session=(--session-limb0 777 --session-limb1 888)
+expect_exit 0 "zk: prove bound to a session" \
+    "${pv}" prove --witness "${issued_witness}" --mode zk --proof-out "${out}/zk-session.proof" \
+    "${zk_session[@]}"
+expect_exit 0 "zk: proof verifies in its own session" \
+    verify zk "${out}/zk-session.proof" "${depth}" "${limb0}" "${limb1}" "${zk_session[@]}"
+expect_exit 1 "zk: proof replayed in another session rejected" \
+    verify zk "${out}/zk-session.proof" "${depth}" "${limb0}" "${limb1}" \
+    --session-limb0 777 --session-limb1 889
+
 echo "== session binding: a proof made for one verifier challenge fails for another"
 session=(--session-limb0 1234567890 --session-limb1 987654321)
 other_session=(--session-limb0 1234567890 --session-limb1 987654322)
